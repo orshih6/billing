@@ -6,6 +6,12 @@ change the API; such changes are called out under **Breaking**.
 
 ## Unreleased
 
+## 0.1.1
+
+- Container images are now built for `linux/amd64` and `linux/arm64`, and are
+  also tagged with a `v` prefix (`ghcr.io/orshih6/billing:v0.1.1`), matching the
+  docs. No code changes.
+
 ## 0.1.0
 
 First public release.

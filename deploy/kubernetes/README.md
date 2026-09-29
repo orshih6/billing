@@ -21,7 +21,7 @@ Production refuses to start without a platform key. Mint one (it is printed
 once):
 
 ```bash
-kubectl -n billing run billing-keys --rm -it --restart=Never --image=ghcr.io/orshih6/billing:v0.1.0 \
+kubectl -n billing run billing-keys --rm -it --restart=Never --image=ghcr.io/orshih6/billing:v0.1.1 \
   --env="DATABASE_URL=$(kubectl -n billing get secret billing-secrets -o jsonpath='{.data.DATABASE_URL}' | base64 -d)" \
   -- keys create --platform --name platform-admin --scopes admin
 ```

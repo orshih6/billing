@@ -16,7 +16,7 @@ spec:
       securityContext: { runAsNonRoot: true, runAsUser: 65532, seccompProfile: { type: RuntimeDefault } }
       containers:
         - name: migrate
-          image: ghcr.io/orshih6/billing:v0.1.0
+          image: ghcr.io/orshih6/billing:v0.1.1
           args: ["migrate"]
           envFrom: [{ secretRef: { name: billing-secrets } }]
           securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
