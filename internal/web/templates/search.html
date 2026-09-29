@@ -1,0 +1,24 @@
+{{define "content"}}
+<div class="pagehead">
+  <div><h1>Search</h1><div class="sub">Names, emails, your user ids, invoice numbers, payment references, or any id.</div></div>
+  <form method="get" class="row" role="search"><label>Find <input type="search" name="q" value="{{.D.Q}}" minlength="2" autofocus></label><button>Search</button></form>
+</div>
+{{with .D.R}}
+  {{if $.D.Empty}}<p class="muted">Nothing matches “{{$.D.Q}}”.</p>{{end}}
+  {{if .Customers}}<section class="card flush"><h2>Customers</h2><div class="tablewrap"><table><tbody>
+    {{range .Customers}}<tr><td><a href="/ui/customers/{{.ID}}">{{.Name}}</a></td><td class="muted">{{.Email}}</td><td class="mono">{{str .ExternalID}}</td></tr>{{end}}
+  </tbody></table></div></section>{{end}}
+  {{if .Invoices}}<section class="card flush"><h2>Invoices</h2><div class="tablewrap"><table><tbody>
+    {{range .Invoices}}<tr><td><a href="/ui/invoices/{{.ID}}">{{if .Number}}{{str .Number}}{{else}}draft{{end}}</a></td><td class="mono">{{str .Reference}}</td>
+      <td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="num">{{money .Total .Currency}}</td></tr>{{end}}
+  </tbody></table></div></section>{{end}}
+  {{if .Payments}}<section class="card flush"><h2>Payments</h2><div class="tablewrap"><table><tbody>
+    {{range .Payments}}<tr><td><a href="/ui/invoices/{{.InvoiceID}}">{{dt .CreatedAt}}</a></td><td>{{.Provider}}</td><td class="mono">{{.ProviderRef}}</td>
+      <td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="num">{{money .Amount .Currency}}</td></tr>{{end}}
+  </tbody></table></div></section>{{end}}
+  {{if .Subscriptions}}<section class="card flush"><h2>Subscriptions</h2><div class="tablewrap"><table><tbody>
+    {{range .Subscriptions}}<tr><td><a href="/ui/subscriptions/{{.ID}}">{{.PlanName}}</a></td>
+      <td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td>renews {{date .CurrentPeriodEnd}}</td></tr>{{end}}
+  </tbody></table></div></section>{{end}}
+{{end}}
+{{end}}

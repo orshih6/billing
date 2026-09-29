@@ -1,0 +1,22 @@
+# Run before every rollout; it is idempotent.
+#   kubectl -n billing delete job billing-migrate --ignore-not-found
+#   kubectl apply -f migrate-job.yaml
+#   kubectl -n billing wait --for=condition=complete job/billing-migrate --timeout=120s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: billing-migrate
+  namespace: billing
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext: { runAsNonRoot: true, runAsUser: 65532, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: migrate
+          image: ghcr.io/orshih6/billing:v0.1.0
+          args: ["migrate"]
+          envFrom: [{ secretRef: { name: billing-secrets } }]
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }

@@ -1,0 +1,119 @@
+{{define "content"}}
+{{$c := .D.C}}{{$csrf := .CSRF}}
+<div class="pagehead">
+  <div><h1>{{$c.Name}}</h1><div class="sub">{{$c.Email}}{{if $c.ExternalID}} · external id <code>{{str $c.ExternalID}}</code>{{end}} · <span class="mono faint">{{$c.ID}}</span></div></div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <h2>Access right now</h2>
+    {{range .D.Entitlements}}
+      <p><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span> <strong>{{.PlanCode}}</strong> <span class="muted">until {{dt .CurrentPeriodEnd}}{{if .CancelAtPeriodEnd}}, then cancels{{end}}</span></p>
+    {{else}}<p class="muted">No active plan.</p>{{end}}
+  </div>
+  <div class="card">
+    <h2>Balance</h2>
+    {{range .D.Balances}}
+      <dl class="kv"><dt>Owes ({{.Currency}})</dt><dd class="num">{{money .Owed .Currency}}</dd><dt>Credit ({{.Currency}})</dt><dd class="num">{{money .Credit .Currency}}</dd></dl>
+    {{else}}<p class="muted">Nothing invoiced yet.</p>{{end}}
+  </div>
+</div>
+
+{{if .P.Has "subscriptions:write"}}{{if .D.Plans}}
+<details class="panel">
+  <summary>Subscribe to a plan</summary>
+  <form method="post" action="/ui/customers/{{$c.ID}}/subscribe" class="form">
+    <input type="hidden" name="_csrf" value="{{$csrf}}">
+    <div class="row">
+      <label>Price
+        <select name="price_id" required>
+          {{range .D.Plans}}{{if ne .Kind "addon"}}{{$plan := .}}{{range .Prices}}{{if .Active}}{{if ne (printf "%v" .Interval) "one_time"}}
+          <option value="{{.ID}}">{{$plan.Name}} — {{money .Amount .Currency}} / {{if gt .IntervalCount 1}}{{.IntervalCount}} {{end}}{{.Interval}}{{if .TrialDays}} ({{.TrialDays}}-day trial){{end}}</option>
+          {{end}}{{end}}{{end}}{{end}}{{end}}
+        </select>
+      </label>
+      <label>Seats <input name="quantity" type="number" min="1" value="1" class="narrow"></label>
+      <label>Promo code <span class="muted">(optional)</span> <input name="promo_code" placeholder="SPRING20"></label>
+    </div>
+    <details class="inner"><summary>Trial</summary>
+      <label>Free trial days <input name="trial_days" type="number" min="0" placeholder="the plan's default" class="narrow"></label>
+    </details>
+    <p class="hint">Without a trial, an invoice is created now and the subscription starts once it is paid. Add-ons can be added on the subscription page.</p>
+    <div><button class="primary">Create subscription</button></div>
+  </form>
+</details>
+{{end}}{{end}}
+
+{{if .P.Has "invoices:write"}}
+<details class="panel">
+  <summary>One-off invoice</summary>
+  <form method="post" action="/ui/customers/{{$c.ID}}/invoice" class="form">
+    <input type="hidden" name="_csrf" value="{{$csrf}}">
+    <div class="row">
+      <label>Description <input name="description" required placeholder="Setup fee"></label>
+      <label>Unit amount <input name="amount" required inputmode="decimal" placeholder="150000"></label>
+      <label>Quantity <input name="quantity" type="number" min="1" value="1"></label>
+      <label>Currency <select name="currency">{{range currencies}}<option {{if eq . $.D.Currency}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+    </div>
+    <div class="row"><label>Memo <input name="memo"></label><label>Promo code <span class="muted">(optional)</span> <input name="promo_code"></label></div>
+    <label class="check"><input type="checkbox" name="finalize" checked> Finalize now (otherwise a draft you can add lines to)</label>
+    <div><button class="primary">Create invoice</button></div>
+  </form>
+</details>
+{{end}}
+
+{{if .P.Has "customers:write"}}
+<details class="panel">
+  <summary>Grant credit</summary>
+  <form method="post" action="/ui/customers/{{$c.ID}}/credit" class="form">
+    <input type="hidden" name="_csrf" value="{{$csrf}}">
+    <div class="row">
+      <label>Amount <input name="amount" required inputmode="decimal"></label>
+      <label>Currency <select name="currency">{{range currencies}}<option {{if eq . $.D.Currency}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+      <label>Reason <input name="reason" placeholder="Goodwill for outage"></label>
+    </div>
+    <p class="muted">Credit is applied immediately to open invoices, then to future ones.</p>
+    <div><button class="primary">Grant credit</button></div>
+  </form>
+</details>
+<details class="panel">
+  <summary>Edit details</summary>
+  <form method="post" action="/ui/customers/{{$c.ID}}" class="form">
+    <input type="hidden" name="_csrf" value="{{$csrf}}">
+    <div class="row">
+      <label>Name <input name="name" value="{{$c.Name}}" required></label>
+      <label>Email <input name="email" type="email" value="{{$c.Email}}"></label>
+      <label>Phone <input name="phone" value="{{$c.Phone}}"></label>
+      <label>External id <input name="external_id" value="{{str $c.ExternalID}}"></label>
+    </div>
+    <fieldset class="row plainset">
+      <legend>Tax</legend>
+      <label class="check"><input type="checkbox" name="tax_exempt" {{if $c.TaxExempt}}checked{{end}}> Never charge this customer tax</label>
+      <label>Own tax rate, % <span class="muted">(blank = your default)</span> <input name="tax_rate" inputmode="decimal" value="{{percentInput $c.TaxRateBps}}" class="narrow"></label>
+    </fieldset>
+    <div><button>Save</button></div>
+  </form>
+</details>
+{{end}}
+
+{{if .D.Subs}}
+<div class="card flush"><h2>Subscriptions</h2><div class="tablewrap"><table>
+  <thead><tr><th>Plan</th><th>Status</th><th>Current period</th><th>Created</th></tr></thead><tbody>
+  {{range .D.Subs}}<tr><td><a href="/ui/subscriptions/{{.ID}}">{{.PlanCode}}</a></td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span>{{if .CancelAtPeriodEnd}} <span class="badge">cancels</span>{{end}}</td><td class="nowrap">{{date .CurrentPeriodStart}} → {{date .CurrentPeriodEnd}}</td><td class="faint">{{date .CreatedAt}}</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}
+
+{{if .D.Invoices}}
+<div class="card flush"><h2>Invoices</h2><div class="tablewrap"><table>
+  <thead><tr><th>Number</th><th>Type</th><th>Status</th><th class="num">Total</th><th class="num">Due</th><th>Created</th></tr></thead><tbody>
+  {{range .D.Invoices}}<tr><td><a href="/ui/invoices/{{.ID}}">{{if .Number}}{{str .Number}}{{else}}draft{{end}}</a></td><td class="muted">{{kindLabel .Kind}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="num">{{money .Total .Currency}}</td><td class="num">{{money .AmountDue .Currency}}</td><td class="nowrap">{{date .CreatedAt}}</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}
+
+{{if .D.Payments}}
+<div class="card flush"><h2>Payments</h2><div class="tablewrap"><table>
+  <thead><tr><th>When</th><th>Provider</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody>
+  {{range .D.Payments}}<tr><td class="nowrap"><a href="/ui/invoices/{{.InvoiceID}}">{{dt .CreatedAt}}</a></td><td>{{.Provider}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="num">{{money .Amount .Currency}}</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}
+{{end}}

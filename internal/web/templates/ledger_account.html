@@ -1,0 +1,15 @@
+{{define "content"}}
+{{$a := .D.A}}
+<div class="pagehead">
+  <div><h1>{{$a.Name}}</h1><div class="sub"><code>{{$a.Code}}</code> · {{$a.Type}} · {{$a.Currency}}{{if $a.CustomerID}} · <a href="/ui/customers/{{derefID $a.CustomerID}}">customer</a>{{end}}</div></div>
+  <div class="stat"><div class="label">Balance</div><div class="value">{{money $a.Balance $a.Currency}}</div></div>
+</div>
+<div class="card flush"><div class="tablewrap"><table>
+  <thead><tr><th>When</th><th>Kind</th><th>Description</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead><tbody>
+  {{range .D.Entries}}
+  <tr><td class="nowrap">{{dt .CreatedAt}}</td><td class="muted">{{.Kind}}</td>
+    <td>{{if .InvoiceID}}<a href="/ui/invoices/{{derefID .InvoiceID}}">{{.Description}}</a>{{else}}{{.Description}}{{end}}</td>
+    <td class="num">{{if .Debit}}{{money .Debit $a.Currency}}{{end}}</td><td class="num">{{if .Credit}}{{money .Credit $a.Currency}}{{end}}</td></tr>
+  {{else}}<tr><td colspan="5" class="empty">No entries.</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}

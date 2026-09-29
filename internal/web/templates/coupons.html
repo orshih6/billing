@@ -1,0 +1,53 @@
+{{define "content"}}
+{{$csrf := .CSRF}}{{$canWrite := .P.Has "coupons:write"}}
+<div class="pagehead"><div><h1>Coupons</h1><div class="sub">Discounts customers get by entering a promo code at checkout, or that you apply to a subscription.</div></div></div>
+
+{{if $canWrite}}
+<details class="panel" {{if not .D.List}}open{{end}}>
+  <summary>New coupon</summary>
+  <form method="post" action="/ui/coupons" class="form">
+    <input type="hidden" name="_csrf" value="{{$csrf}}">
+    <div class="row">
+      <label>Promo code <input name="code" required placeholder="SPRING20" autocapitalize="characters" pattern="\S+" title="No spaces"></label>
+      <label>Name (optional) <input name="name" placeholder="Spring sale"></label>
+    </div>
+    <fieldset class="row plainset">
+      <legend>Discount</legend>
+      <label>Type <select name="kind"><option value="percent">Percent off</option><option value="amount">Fixed amount off</option></select></label>
+      <label>Value <input name="value" required inputmode="decimal" placeholder="20 (percent) or 5000 (amount)"></label>
+      <label>Currency <span class="muted">(fixed amount only)</span> <select name="currency">{{range currencies}}<option {{if eq . $.D.Currency}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+    </fieldset>
+    <fieldset class="row plainset">
+      <legend>On subscriptions, it lasts</legend>
+      <label>For <select name="duration"><option value="once">The first period only</option><option value="repeating">Several periods</option><option value="forever">As long as they subscribe</option></select></label>
+      <label>How many periods <span class="muted">(if several)</span> <input name="periods" type="number" min="1" placeholder="3" class="narrow"></label>
+    </fieldset>
+    <details class="inner">
+      <summary>Limits (optional)</summary>
+      <div class="row">
+        <label>Can be used at most <input name="max_redemptions" type="number" min="1" placeholder="unlimited" class="narrow"></label>
+        <label>Last day to use it <input name="redeem_by" type="date"></label>
+      </div>
+      {{if .D.Plans}}
+      <p class="muted">Only discount these plans (none checked = everything):</p>
+      <div class="scopes">{{range .D.Plans}}<label class="check"><input type="checkbox" name="plan_ids" value="{{.ID}}"> {{.Name}}</label>{{end}}</div>
+      {{end}}
+    </details>
+    <div><button class="primary">Create coupon</button></div>
+  </form>
+</details>
+{{end}}
+
+<div class="card flush"><div class="tablewrap"><table>
+  <thead><tr><th>Code</th><th>Discount</th><th>Lasts</th><th class="num">Used</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {{range .D.List}}
+  <tr><td><strong class="mono">{{.Code}}</strong>{{if ne .Name .Code}}<div class="muted">{{.Name}}</div>{{end}}</td>
+    <td>{{if .PercentOff}}{{deref .PercentOff}}% off{{else}}{{money (derefAmount .AmountOff) .Currency}} off{{end}}{{if .PlanIDs}} <span class="muted">· some plans</span>{{end}}</td>
+    <td>{{if eq .Duration "forever"}}Every period{{else if eq .Duration "once"}}First period{{else}}{{deref .DurationPeriods}} periods{{end}}</td>
+    <td class="num">{{.TimesRedeemed}}{{with .MaxRedemptions}} / {{.}}{{end}}</td>
+    <td>{{if not .Active}}<span class="badge">off</span>{{else if .RedeemBy}}<span class="badge b-active">until {{date .RedeemBy}}</span>{{else}}<span class="badge b-active">active</span>{{end}}</td>
+    <td>{{if $canWrite}}<form method="post" action="/ui/coupons/{{.ID}}/toggle" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="active" value="{{if .Active}}false{{else}}true{{end}}"><button class="small">{{if .Active}}Turn off{{else}}Turn on{{end}}</button></form>{{end}}</td></tr>
+  {{else}}<tr><td colspan="6" class="empty">No coupons yet. Create one above, then share its code or apply it to a subscription.</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}

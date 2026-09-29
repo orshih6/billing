@@ -1,0 +1,10 @@
+{{define "content"}}
+<h1>Log in</h1>
+<p class="muted lead">Paste an API key. You will be able to do exactly what its scopes allow.</p>
+<form method="post" action="/ui/login" class="form">
+  <label>API key
+    <input name="api_key" type="password" autocomplete="off" placeholder="bk_…" required autofocus>
+  </label>
+  <button class="primary">Continue</button>
+</form>
+{{end}}

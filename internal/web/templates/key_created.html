@@ -1,0 +1,12 @@
+{{define "content"}}
+<div class="pagehead"><div><h1>{{.Title}}</h1><div class="sub">{{.D.Context}}</div></div></div>
+<div class="card">
+  <p><strong>Copy this {{if .D.Secret}}signing secret{{else}}key{{end}} now.</strong> It is shown once and cannot be retrieved later.</p>
+  <div class="secretbox" id="secret">{{.D.Token}}</div>
+  <div class="actions mt">
+    <button type="button" data-copy="#secret">Copy</button>
+    {{if .D.Secret}}<a class="btn" href="/ui/webhooks">Done</a>{{else}}<a class="btn" href="/ui/keys">Done</a>{{end}}
+  </div>
+  {{if not .D.Secret}}<p class="muted mt">Send it as the <code>X-API-Key</code> header.</p>{{end}}
+</div>
+{{end}}

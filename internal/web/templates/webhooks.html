@@ -1,0 +1,27 @@
+{{define "content"}}
+<div class="pagehead"><div><h1>Webhooks</h1><div class="sub">Events are POSTed as JSON, signed with <code>X-Billing-Signature: t=…,v1=HMAC-SHA256(secret, "t.body")</code>, and retried with backoff until they get a 2xx.</div></div></div>
+{{if .P.Has "webhooks:write"}}
+<details class="panel" {{if not .D.List}}open{{end}}>
+  <summary>New endpoint</summary>
+  <form method="post" action="/ui/webhooks" class="form">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <div class="row">
+      <label>URL <input name="url" type="url" required placeholder="https://app.example.com/billing/webhook"></label>
+      <label>Description <input name="description"></label>
+    </div>
+    <p class="muted">Events (none selected = all):</p>
+    <div class="scopes">{{range .D.Types}}<label class="check"><input type="checkbox" name="event_types" value="{{.}}"><code>{{.}}</code></label>{{end}}</div>
+    <div><button class="primary">Create endpoint</button></div>
+  </form>
+</details>
+{{end}}
+<div class="card flush"><div class="tablewrap"><table>
+  <thead><tr><th>URL</th><th>Events</th><th>Status</th><th>Created</th></tr></thead>
+  <tbody>
+  {{range .D.List}}
+  <tr><td><a href="/ui/webhooks/{{.ID}}">{{.URL}}</a>{{if .Description}}<div class="muted">{{.Description}}</div>{{end}}</td>
+    <td class="mono">{{if .EventTypes}}{{scopeList .EventTypes}}{{else}}all{{end}}</td>
+    <td>{{if .Enabled}}<span class="badge b-active">enabled</span>{{else}}<span class="badge">disabled</span>{{end}}</td><td class="nowrap">{{date .CreatedAt}}</td></tr>
+  {{else}}<tr><td colspan="4" class="empty">No endpoints.</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}

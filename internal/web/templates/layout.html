@@ -1,0 +1,76 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · Billing</title>
+<link rel="stylesheet" href="/ui/static/app.css">
+<script src="/ui/static/app.js" defer></script>
+</head>
+<body>
+{{if .P}}
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><span class="brand-mark"></span>Billing</div>
+    <nav class="nav" aria-label="Main">
+      {{if .Tenant}}
+      <a href="/ui/" class="{{if eq .Nav "dashboard"}}on{{end}}">Home</a>
+      <a href="/ui/customers" class="{{if eq .Nav "customers"}}on{{end}}">Customers</a>
+      <a href="/ui/subscriptions" class="{{if eq .Nav "subscriptions"}}on{{end}}">Subscriptions</a>
+      <a href="/ui/invoices" class="{{if eq .Nav "invoices"}}on{{end}}">Invoices</a>
+      <a href="/ui/payments" class="{{if eq .Nav "payments"}}on{{end}}">Payments</a>
+      <span class="navgroup">What you sell</span>
+      <a href="/ui/plans" class="{{if eq .Nav "plans"}}on{{end}}">Plans &amp; add-ons</a>
+      <a href="/ui/coupons" class="{{if eq .Nav "coupons"}}on{{end}}">Coupons</a>
+      <span class="navgroup">For developers</span>
+      <a href="/ui/keys" class="{{if eq .Nav "keys"}}on{{end}}">API keys</a>
+      <a href="/ui/webhooks" class="{{if eq .Nav "webhooks"}}on{{end}}">Webhooks</a>
+      <a href="/ui/events" class="{{if eq .Nav "events"}}on{{end}}">Event log</a>
+      <a href="/ui/ledger" class="{{if eq .Nav "ledger"}}on{{end}}">Ledger</a>
+      <span class="sep"></span>
+      <a href="/ui/settings" class="{{if eq .Nav "settings"}}on{{end}}">Settings</a>
+      {{end}}
+      {{if .P.IsPlatform}}<a href="/ui/tenants" class="{{if eq .Nav "tenants"}}on{{end}}">All tenants</a>{{end}}
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="topleft">
+        {{if .P.IsPlatform}}
+        <form method="post" action="/ui/tenant" class="inline">
+          <input type="hidden" name="_csrf" value="{{.CSRF}}">
+          <select name="tenant_id" data-autosubmit aria-label="Tenant">
+            <option value="">Choose tenant…</option>
+            {{$cur := .Tenant}}
+            {{range .Tenants}}<option value="{{.ID}}" {{if $cur}}{{if eq .ID $cur.ID}}selected{{end}}{{end}}>{{.Name}} ({{.Slug}})</option>{{end}}
+          </select>
+        </form>
+        {{else if .Tenant}}<strong>{{.Tenant.Name}}</strong> <span class="faint">{{.Tenant.Slug}}</span>{{end}}
+        {{if .Tenant}}<form method="get" action="/ui/search" class="topsearch" role="search">
+          <input type="search" name="q" placeholder="Search customers, invoices, payments…" aria-label="Search" minlength="2">
+        </form>{{end}}
+      </div>
+      <div class="who">
+        <span class="muted">Key: <strong>{{.P.Name}}</strong>{{if .P.IsPlatform}} · platform{{end}}</span>
+        <form method="post" action="/ui/logout" class="inline"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="small">Log out</button></form>
+      </div>
+    </header>
+    <main class="content">
+      {{if .Flash}}<div class="flash ok" role="status">{{.Flash}}</div>{{end}}
+      {{if .FlashErr}}<div class="flash err" role="alert">{{.FlashErr}}</div>{{end}}
+      {{template "content" .}}
+    </main>
+  </div>
+</div>
+{{else}}
+<div class="solo">
+  <div class="card">
+    <div class="brand"><span class="brand-mark"></span>Billing</div>
+    {{if .Flash}}<div class="flash ok" role="status">{{.Flash}}</div>{{end}}
+    {{if .FlashErr}}<div class="flash err" role="alert">{{.FlashErr}}</div>{{end}}
+    {{template "content" .}}
+  </div>
+</div>
+{{end}}
+</body>
+</html>{{end}}

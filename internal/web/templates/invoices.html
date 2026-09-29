@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="pagehead"><div><h1>Invoices</h1><div class="sub">Create one-off invoices from a customer's page.</div></div></div>
+<div class="filters">
+  <a href="/ui/invoices" class="{{if not .D.Status}}on{{end}}">All</a>
+  {{range .D.Statuses}}<a href="?status={{.}}" class="{{if eq . $.D.Status}}on{{end}}">{{statusLabel .}}</a>{{end}}
+</div>
+<div class="card flush"><div class="tablewrap"><table>
+  <thead><tr><th>Number</th><th>Customer</th><th>Type</th><th>Status</th><th class="num">Total</th><th class="num">Due</th><th>Due date</th></tr></thead>
+  <tbody>
+  {{range .D.List.Data}}
+  <tr><td><a href="/ui/invoices/{{.ID}}">{{if .Number}}{{str .Number}}{{else}}draft{{end}}</a></td>
+    <td><a href="/ui/customers/{{.CustomerID}}">{{index $.D.Names (printf "%v" .CustomerID)}}</a></td>
+    <td class="muted">{{kindLabel .Kind}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td>
+    <td class="num">{{money .Total .Currency}}</td><td class="num">{{money .AmountDue .Currency}}</td><td class="nowrap">{{date .DueAt}}</td></tr>
+  {{else}}<tr><td colspan="7" class="empty">No invoices.</td></tr>{{end}}
+  </tbody></table></div>
+  {{if .D.Next}}<div class="pager"><a class="btn" href="?status={{.D.Status}}&after={{.D.Next}}">Older →</a></div>{{end}}
+</div>
+{{end}}

@@ -1,0 +1,27 @@
+{{define "content"}}
+<div class="pagehead">
+  <div><h1>Ledger</h1><div class="sub">Double-entry and append-only. Every balance below is recomputed from its entries in the reconciliation check.</div></div>
+  <div class="actions">{{if .D.All}}<a class="btn" href="/ui/ledger">System accounts only</a>{{else}}<a class="btn" href="/ui/ledger?all=1">Include customer accounts</a>{{end}}</div>
+</div>
+<div class="card">
+  {{if .D.Rec.OK}}<span class="badge b-ok">Books reconcile</span> <span class="muted">Every transaction balances and every stored balance matches its entries.</span>
+  {{else}}<span class="badge b-bad">Mismatch</span>
+    <pre class="json">{{json .D.Rec}}</pre>{{end}}
+</div>
+<div class="card flush"><h2>Accounts</h2><div class="tablewrap"><table>
+  <thead><tr><th>Account</th><th>Type</th><th>Currency</th><th class="num">Balance</th></tr></thead><tbody>
+  {{range .D.Accounts}}
+  <tr><td><a href="/ui/ledger/accounts/{{.ID}}">{{if .CustomerID}}{{.Name}} <span class="faint mono">{{short (derefID .CustomerID)}}</span>{{else}}<code>{{.Code}}</code>{{end}}</a></td>
+    <td class="muted">{{.Type}}</td><td>{{.Currency}}</td><td class="num">{{money .Balance .Currency}}</td></tr>
+  {{else}}<tr><td colspan="4" class="empty">No accounts yet; they appear with the first posting.</td></tr>{{end}}
+  </tbody></table></div></div>
+<div class="card flush"><h2>Recent postings</h2><div class="tablewrap"><table>
+  <thead><tr><th>When</th><th>Kind</th><th>Description</th><th>Account</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead><tbody>
+  {{range .D.Txs}}{{$t := .}}{{range $n, $e := .Entries}}
+  <tr><td class="nowrap faint">{{if eq $n 0}}{{dt $t.EffectiveAt}}{{end}}</td><td class="muted">{{if eq $n 0}}{{$t.Kind}}{{end}}</td>
+    <td>{{if eq $n 0}}{{if $t.InvoiceID}}<a href="/ui/invoices/{{$t.InvoiceID}}">{{$t.Description}}</a>{{else}}{{$t.Description}}{{end}}{{end}}</td>
+    <td>{{index $.D.AccountNames (printf "%v" $e.AccountID)}}</td>
+    <td class="num">{{if $e.Debit}}{{money $e.Debit $t.Currency}}{{end}}</td><td class="num">{{if $e.Credit}}{{money $e.Credit $t.Currency}}{{end}}</td></tr>
+  {{end}}{{else}}<tr><td colspan="6" class="empty">No postings yet.</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}

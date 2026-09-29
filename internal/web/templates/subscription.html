@@ -1,0 +1,150 @@
+{{define "content"}}
+{{$s := .D.S}}{{$csrf := .CSRF}}{{$st := printf "%v" $s.Status}}
+{{$canWrite := .P.Has "subscriptions:write"}}
+{{$changeable := and $canWrite (or (eq $st "active") (eq $st "trialing")) (not $s.CancelAtPeriodEnd)}}
+<div class="pagehead">
+  <div>
+    <h1>{{$s.PlanName}} <span class="badge b-{{$s.Status}}" title="{{$s.Status}}">{{statusLabel $s.Status}}</span></h1>
+    <div class="sub">{{with .D.Customer}}for <a href="/ui/customers/{{.ID}}">{{.Name}}</a> · {{end}}
+      {{if $s.Entitled}}has access{{else}}no access{{end}}
+      {{if or (eq $st "active") (eq $st "trialing") (eq $st "past_due")}} · {{if $s.CancelAtPeriodEnd}}ends{{else}}renews{{end}} {{date $s.CurrentPeriodEnd}}{{end}}</div>
+  </div>
+  {{if $canWrite}}
+  <div class="actions">
+    {{if $s.CancelAtPeriodEnd}}
+      <form method="post" action="/ui/subscriptions/{{$s.ID}}/resume" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="primary">Keep subscription</button></form>
+    {{else if or (eq $st "active") (eq $st "trialing")}}
+      <form method="post" action="/ui/subscriptions/{{$s.ID}}/cancel" class="inline" data-confirm="Cancel at the end of the current period? They keep access until {{date $s.CurrentPeriodEnd}}."><input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="when" value="period_end"><button>Cancel at period end</button></form>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+
+{{if eq $st "incomplete"}}{{with $s.LatestInvoice}}
+<div class="callout">This subscription starts when its first invoice is paid. <a href="/ui/invoices/{{.ID}}">Open invoice {{str .Number}}</a></div>
+{{end}}{{end}}
+{{if eq $st "past_due"}}<div class="callout warn">The renewal is unpaid. They keep access for the grace period, then the subscription ends.</div>{{end}}
+
+<section class="card">
+  <h2>What they pay for</h2>
+  <table class="plain">
+    <tbody>
+    {{with .D.Price}}
+    <tr><td><strong>{{$s.PlanName}}</strong><div class="muted">base plan · {{money .Amount .Currency}} per seat every {{if gt .IntervalCount 1}}{{.IntervalCount}} {{end}}{{.Interval}}</div></td>
+      <td class="num">{{$s.Quantity}} seat{{if ne $s.Quantity 1}}s{{end}}
+        {{with $s.PendingQuantity}}<div class="muted">changes to {{.}} on {{date $s.PendingFrom}}</div>{{end}}</td>
+      <td class="num">{{money (mul .Amount $s.Quantity) .Currency}}</td></tr>
+    {{end}}
+    {{range $a := $s.AddOns}}
+    <tr><td><strong>{{.PlanName}}</strong><div class="muted">add-on · {{money .UnitAmount .Currency}} each</div></td>
+      <td class="num">× {{.Quantity}}
+        {{with .PendingQuantity}}<div class="muted">{{if eq . 0}}removed{{else}}changes to {{.}}{{end}} on {{date $a.PendingFrom}}</div>{{end}}</td>
+      <td class="num">{{money (mul .UnitAmount .Quantity) .Currency}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{with .D.PendingPrice}}<p class="muted">Switches to {{money .Amount .Currency}} per seat from {{date $s.PendingFrom}}.</p>{{end}}
+  {{with $s.Discount}}
+  <div class="discountline"><span class="badge b-ok">{{.Code}}</span> {{.Description}}
+    <span class="muted">· {{if eq .Duration "forever"}}every period{{else if eq .Duration "once"}}first period only{{else}}{{.PeriodsUsed}} of {{deref .Periods}} periods used{{end}}</span>
+    {{if $canWrite}}<form method="post" action="/ui/subscriptions/{{$s.ID}}/discount/remove" class="inline" data-confirm="Remove this discount from future invoices?"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small">Remove</button></form>{{end}}</div>
+  {{end}}
+  {{if $changeable}}<p class="hint">Adding seats or add-ons takes effect now; you invoice the difference for the rest of this period. Removing them takes effect at renewal. Nothing is refunded.</p>{{end}}
+</section>
+
+{{if $changeable}}
+<div class="grid g2">
+  <details class="panel">
+    <summary>Change seats</summary>
+    <form method="post" action="/ui/subscriptions/{{$s.ID}}/quantity" class="row">
+      <input type="hidden" name="_csrf" value="{{$csrf}}">
+      <label>Seats <input name="quantity" type="number" min="1" value="{{$s.Quantity}}" required class="narrow"></label>
+      <button>Update seats</button>
+    </form>
+  </details>
+
+  <details class="panel">
+    <summary>Add or remove add-ons</summary>
+    <div>
+      {{range $s.AddOns}}
+      <form method="post" action="/ui/subscriptions/{{$s.ID}}/add-ons" class="row compact">
+        <input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="price_id" value="{{.PriceID}}">
+        <label>{{.PlanName}} <input name="quantity" type="number" min="0" value="{{.Quantity}}" class="narrow"></label>
+        <button class="small">Update</button>
+      </form>
+      {{end}}
+      {{if .D.Plans}}
+      <form method="post" action="/ui/subscriptions/{{$s.ID}}/add-ons" class="row compact">
+        <input type="hidden" name="_csrf" value="{{$csrf}}">
+        <label>Add
+          <select name="price_id" required>
+            <option value="">Choose an add-on…</option>
+            {{range .D.Plans}}{{if eq .Kind "addon"}}{{$plan := .}}{{range .Prices}}{{if .Active}}
+            <option value="{{.ID}}">{{$plan.Name}} — {{money .Amount .Currency}} / {{.Interval}}</option>
+            {{end}}{{end}}{{end}}{{end}}
+          </select></label>
+        <label>How many <input name="quantity" type="number" min="1" value="1" class="narrow"></label>
+        <button class="small primary">Add</button>
+      </form>
+      {{end}}
+      <p class="hint">Set a quantity to 0 to remove an add-on at renewal. Add-ons must bill on the same schedule as the plan.</p>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>Apply a promo code</summary>
+    <form method="post" action="/ui/subscriptions/{{$s.ID}}/discount" class="row">
+      <input type="hidden" name="_csrf" value="{{$csrf}}">
+      <label>Code <input name="promo_code" required placeholder="SPRING20" autocapitalize="characters"></label>
+      <button>Apply</button>
+    </form>
+  </details>
+
+  {{if .D.Plans}}
+  <details class="panel">
+    <summary>Switch plan</summary>
+    <form method="post" action="/ui/subscriptions/{{$s.ID}}/change-price" class="form">
+      <input type="hidden" name="_csrf" value="{{$csrf}}">
+      <label>New plan
+        <select name="price_id" required>
+          {{range .D.Plans}}{{if ne .Kind "addon"}}{{$plan := .}}{{range .Prices}}{{if .Active}}{{if ne (printf "%v" .Interval) "one_time"}}{{if ne .ID $s.PriceID}}
+          <option value="{{.ID}}">{{$plan.Name}} — {{money .Amount .Currency}} / {{.Interval}}</option>
+          {{end}}{{end}}{{end}}{{end}}{{end}}{{end}}
+        </select>
+      </label>
+      <p class="hint">Moving to a more expensive plan happens now, and you invoice the difference. A cheaper plan starts at renewal.</p>
+      <div><button>Switch plan</button></div>
+    </form>
+  </details>
+  {{end}}
+</div>
+{{end}}
+
+{{if .D.Invoices}}
+<section class="card flush"><h2>Invoices</h2><div class="tablewrap"><table>
+  <thead><tr><th>Invoice</th><th>For</th><th>Status</th><th class="num">Total</th><th class="num">Left to pay</th></tr></thead><tbody>
+  {{range .D.Invoices}}<tr><td><a href="/ui/invoices/{{.ID}}">{{if .Number}}{{str .Number}}{{else}}draft{{end}}</a></td>
+    <td class="nowrap">{{if eq (printf "%v" .Kind) "proration"}}change mid-period{{else}}{{date .PeriodStart}} → {{date .PeriodEnd}}{{end}}</td>
+    <td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td>
+    <td class="num">{{money .Total .Currency}}</td><td class="num">{{money .AmountDue .Currency}}</td></tr>{{end}}
+  </tbody></table></div></section>
+{{end}}
+
+<details class="panel">
+  <summary>Technical details</summary>
+  <div>
+    <dl class="kv">
+      <dt>Subscription id</dt><dd class="mono">{{$s.ID}}</dd>
+      <dt>Status code</dt><dd class="mono">{{$s.Status}}</dd>
+      <dt>Current period</dt><dd>{{dt $s.CurrentPeriodStart}} → {{dt $s.CurrentPeriodEnd}}</dd>
+      {{if $s.TrialEnd}}<dt>Trial ends</dt><dd>{{dt $s.TrialEnd}}</dd>{{end}}
+      <dt>Billing anchor</dt><dd>{{dt $s.BillingAnchor}} (period {{$s.Cycle}})</dd>
+      {{if $s.EndedAt}}<dt>Ended</dt><dd>{{dt $s.EndedAt}}</dd>{{end}}
+    </dl>
+    {{if $canWrite}}{{if or (eq $st "active") (eq $st "trialing") (eq $st "past_due") (eq $st "incomplete")}}
+    <form method="post" action="/ui/subscriptions/{{$s.ID}}/cancel" class="mt" data-confirm="End this subscription immediately? Its unpaid invoices are voided and nothing is refunded automatically.">
+      <input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="when" value="now"><button class="danger">End immediately</button></form>
+    {{end}}{{end}}
+  </div>
+</details>
+{{end}}

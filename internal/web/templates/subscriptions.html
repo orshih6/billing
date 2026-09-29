@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="pagehead"><div><h1>Subscriptions</h1><div class="sub">Create subscriptions from a customer's page.</div></div></div>
+<div class="filters">
+  <a href="/ui/subscriptions" class="{{if not .D.Status}}on{{end}}">All</a>
+  {{range .D.Statuses}}<a href="?status={{.}}" class="{{if eq . $.D.Status}}on{{end}}">{{statusLabel .}}</a>{{end}}
+</div>
+<div class="card flush"><div class="tablewrap"><table>
+  <thead><tr><th>Customer</th><th>Plan</th><th>Status</th><th>Current period</th><th>Created</th></tr></thead>
+  <tbody>
+  {{range .D.List.Data}}
+  <tr><td><a href="/ui/customers/{{.CustomerID}}">{{index $.D.Names (printf "%v" .CustomerID)}}</a></td>
+    <td><a href="/ui/subscriptions/{{.ID}}">{{.PlanCode}}</a></td>
+    <td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span>{{if .CancelAtPeriodEnd}} <span class="badge">cancels</span>{{end}}</td>
+    <td class="nowrap">{{date .CurrentPeriodStart}} → {{date .CurrentPeriodEnd}}</td><td class="nowrap faint">{{date .CreatedAt}}</td></tr>
+  {{else}}<tr><td colspan="5" class="empty">No subscriptions.</td></tr>{{end}}
+  </tbody></table></div>
+  {{if .D.Next}}<div class="pager"><a class="btn" href="?status={{.D.Status}}&after={{.D.Next}}">Older →</a></div>{{end}}
+</div>
+{{end}}

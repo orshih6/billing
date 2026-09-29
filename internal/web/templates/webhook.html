@@ -1,0 +1,22 @@
+{{define "content"}}
+{{$e := .D.E}}{{$csrf := .CSRF}}
+<div class="pagehead">
+  <div><h1>Webhook endpoint</h1><div class="sub mono">{{$e.URL}}</div></div>
+  {{if .P.Has "webhooks:write"}}
+  <div class="actions">
+    <form method="post" action="/ui/webhooks/{{$e.ID}}/toggle" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="enabled" value="{{if $e.Enabled}}false{{else}}true{{end}}"><button>{{if $e.Enabled}}Disable{{else}}Enable{{end}}</button></form>
+    <form method="post" action="/ui/webhooks/{{$e.ID}}/delete" class="inline" data-confirm="Delete this endpoint? Queued deliveries to it will fail."><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="danger">Delete</button></form>
+  </div>
+  {{end}}
+</div>
+<div class="card flush"><h2>Deliveries</h2><div class="tablewrap"><table>
+  <thead><tr><th>Created</th><th>Status</th><th class="num">Attempts</th><th>Last response</th><th>Next attempt</th><th></th></tr></thead>
+  <tbody>
+  {{range .D.Deliveries}}
+  <tr><td class="nowrap">{{dt .CreatedAt}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="num">{{.Attempts}}</td>
+    <td>{{if .LastStatusCode}}{{.LastStatusCode}}{{end}} <span class="muted">{{.LastError}}</span></td>
+    <td class="nowrap">{{if eq .Status "pending"}}{{dt .NextAttemptAt}}{{end}}</td>
+    <td>{{if ne .Status "succeeded"}}{{if $.P.Has "webhooks:write"}}<form method="post" action="/ui/deliveries/{{.ID}}/retry" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small">Retry now</button></form>{{end}}{{end}}</td></tr>
+  {{else}}<tr><td colspan="6" class="empty">Nothing delivered yet.</td></tr>{{end}}
+  </tbody></table></div></div>
+{{end}}

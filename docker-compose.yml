@@ -1,0 +1,46 @@
+# `docker compose up -d postgres` starts just the database (localhost:5434),
+# which is what the Makefile and the tests use. `--profile full` also builds
+# and runs the service itself.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: billing-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: billing
+    ports:
+      - "5434:5432"
+    volumes:
+      - billing-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d billing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    profiles: ["full"]
+    build: { context: ., args: { VERSION: compose } }
+    command: ["migrate"]
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/billing?sslmode=disable
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    profiles: ["full"]
+    build: { context: ., args: { VERSION: compose } }
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/billing?sslmode=disable
+      BOOTSTRAP_API_KEYS: ${BOOTSTRAP_API_KEYS:-}
+      UI_COOKIE_KEY: ${UI_COOKIE_KEY:-compose-only-cookie-key-change-me-please}
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+volumes:
+  billing-pgdata:
