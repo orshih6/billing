@@ -22,15 +22,18 @@
       <span class="navgroup">What you sell</span>
       <a href="/ui/plans" class="{{if eq .Nav "plans"}}on{{end}}">Plans &amp; add-ons</a>
       <a href="/ui/coupons" class="{{if eq .Nav "coupons"}}on{{end}}">Coupons</a>
-      <span class="navgroup">For developers</span>
-      <a href="/ui/keys" class="{{if eq .Nav "keys"}}on{{end}}">API keys</a>
-      <a href="/ui/webhooks" class="{{if eq .Nav "webhooks"}}on{{end}}">Webhooks</a>
-      <a href="/ui/events" class="{{if eq .Nav "events"}}on{{end}}">Event log</a>
-      <a href="/ui/ledger" class="{{if eq .Nav "ledger"}}on{{end}}">Ledger</a>
       <span class="sep"></span>
       <a href="/ui/settings" class="{{if eq .Nav "settings"}}on{{end}}">Settings</a>
+      <details class="navmore" {{if or (eq .Nav "keys") (eq .Nav "webhooks") (eq .Nav "events") (eq .Nav "ledger")}}open{{end}}>
+        <summary>Advanced</summary>
+        <p class="navnote">For developers and accountants. Day-to-day billing doesn't need these.</p>
+        <a href="/ui/keys" class="{{if eq .Nav "keys"}}on{{end}}">API keys</a>
+        <a href="/ui/webhooks" class="{{if eq .Nav "webhooks"}}on{{end}}">Webhooks</a>
+        <a href="/ui/events" class="{{if eq .Nav "events"}}on{{end}}">Activity log</a>
+        <a href="/ui/ledger" class="{{if eq .Nav "ledger"}}on{{end}}">Ledger</a>
+      </details>
       {{end}}
-      {{if .P.IsPlatform}}<a href="/ui/tenants" class="{{if eq .Nav "tenants"}}on{{end}}">All tenants</a>{{end}}
+      {{if .P.IsPlatform}}<a href="/ui/tenants" class="{{if eq .Nav "tenants"}}on{{end}}">All businesses</a>{{end}}
     </nav>
   </aside>
   <div class="main">
@@ -39,19 +42,19 @@
         {{if .P.IsPlatform}}
         <form method="post" action="/ui/tenant" class="inline">
           <input type="hidden" name="_csrf" value="{{.CSRF}}">
-          <select name="tenant_id" data-autosubmit aria-label="Tenant">
-            <option value="">Choose tenant…</option>
+          <select name="tenant_id" data-autosubmit aria-label="Business">
+            <option value="">Choose a business…</option>
             {{$cur := .Tenant}}
             {{range .Tenants}}<option value="{{.ID}}" {{if $cur}}{{if eq .ID $cur.ID}}selected{{end}}{{end}}>{{.Name}} ({{.Slug}})</option>{{end}}
           </select>
         </form>
         {{else if .Tenant}}<strong>{{.Tenant.Name}}</strong> <span class="faint">{{.Tenant.Slug}}</span>{{end}}
         {{if .Tenant}}<form method="get" action="/ui/search" class="topsearch" role="search">
-          <input type="search" name="q" placeholder="Search customers, invoices, payments…" aria-label="Search" minlength="2">
+          <input type="search" name="q" placeholder="Find a customer, invoice or payment…" aria-label="Search" minlength="2">
         </form>{{end}}
       </div>
       <div class="who">
-        <span class="muted">Key: <strong>{{.P.Name}}</strong>{{if .P.IsPlatform}} · platform{{end}}</span>
+        <span class="muted">Signed in as <strong>{{.P.Name}}</strong>{{if .P.IsPlatform}} · platform admin{{end}}</span>
         <form method="post" action="/ui/logout" class="inline"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="small">Log out</button></form>
       </div>
     </header>

@@ -1,5 +1,5 @@
 {{define "content"}}
-<div class="pagehead"><div><h1>Webhooks</h1><div class="sub">Events are POSTed as JSON, signed with <code>X-Billing-Signature: t=…,v1=HMAC-SHA256(secret, "t.body")</code>, and retried with backoff until they get a 2xx.</div></div></div>
+<div class="pagehead"><div><h1>Webhooks</h1><div class="sub">Tell your own software when something happens here, like a payment arriving. For developers.</div></div></div>
 {{if .P.Has "webhooks:write"}}
 <details class="panel" {{if not .D.List}}open{{end}}>
   <summary>New endpoint</summary>
@@ -9,9 +9,10 @@
       <label>URL <input name="url" type="url" required placeholder="https://app.example.com/billing/webhook"></label>
       <label>Description <input name="description"></label>
     </div>
-    <p class="muted">Events (none selected = all):</p>
+    <p class="muted">Which events to send (tick none to send everything):</p>
     <div class="scopes">{{range .D.Types}}<label class="check"><input type="checkbox" name="event_types" value="{{.}}"><code>{{.}}</code></label>{{end}}</div>
-    <div><button class="primary">Create endpoint</button></div>
+    <div><button class="primary">Create endpoint</button>
+    <p class="hint">Events are POSTed as JSON, signed with <code>X-Billing-Signature: t=…,v1=HMAC-SHA256(secret, "t.body")</code>, and retried with backoff until they get a 2xx.</p></div>
   </form>
 </details>
 {{end}}

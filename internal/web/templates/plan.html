@@ -1,36 +1,35 @@
 {{define "content"}}
 {{$p := .D.Plan}}{{$csrf := .CSRF}}{{$canWrite := .P.Has "plans:write"}}
 <div class="pagehead">
-  <div><h1>{{$p.Name}}</h1><div class="sub">{{if eq $p.Kind "addon"}}Add-on{{else}}Plan{{end}} · code <code>{{$p.Code}}</code> · {{if $p.Active}}available{{else}}archived{{end}}</div></div>
+  <div><h1>{{$p.Name}}</h1><div class="sub">{{if eq $p.Kind "addon"}}Add-on{{else}}Plan{{end}} · {{if $p.Active}}on sale{{else}}not for sale{{end}}</div></div>
 </div>
 {{if $p.Description}}<div class="card">{{$p.Description}}</div>{{end}}
 
 <div class="card flush"><h2>Prices</h2><div class="tablewrap"><table>
-  <thead><tr><th class="num">Amount</th><th>Billing</th><th>Trial</th><th>Status</th><th>Id</th><th></th></tr></thead>
+  <thead><tr><th class="num">Price</th><th>Charged</th><th>Free trial</th><th>Status</th><th></th></tr></thead>
   <tbody>
   {{range $p.Prices}}
   <tr><td class="num">{{money .Amount .Currency}}</td><td>{{if eq (printf "%v" .Interval) "one_time"}}one time{{else}}every {{if gt .IntervalCount 1}}{{.IntervalCount}} {{end}}{{.Interval}}{{end}}</td>
     <td>{{if .TrialDays}}{{.TrialDays}} days{{else}}<span class="faint">—</span>{{end}}</td>
-    <td>{{if .Active}}<span class="badge b-active">active</span>{{else}}<span class="badge">retired</span>{{end}}</td>
-    <td class="mono faint">{{.ID}}</td>
-    <td>{{if $canWrite}}<form method="post" action="/ui/prices/{{.ID}}/toggle" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="active" value="{{if .Active}}false{{else}}true{{end}}"><button class="small">{{if .Active}}Retire{{else}}Re-enable{{end}}</button></form>{{end}}</td></tr>
-  {{else}}<tr><td colspan="6" class="empty">No prices yet.</td></tr>{{end}}
+    <td>{{if .Active}}<span class="badge b-active">for new sign-ups</span>{{else}}<span class="badge">retired</span>{{end}}</td>
+    <td>{{if $canWrite}}<form method="post" action="/ui/prices/{{.ID}}/toggle" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="active" value="{{if .Active}}false{{else}}true{{end}}"><button class="small" title="{{if .Active}}New customers can no longer pick this price. Existing subscribers keep it.{{else}}Offer this price to new customers again.{{end}}">{{if .Active}}Retire{{else}}Re-enable{{end}}</button></form>{{end}}</td></tr>
+  {{else}}<tr><td colspan="5" class="empty">No prices yet. Add one below so customers can sign up.</td></tr>{{end}}
   </tbody></table></div></div>
 
 {{if $canWrite}}
 <details class="panel">
-  <summary>Add a price</summary>
+  <summary>Add a new price</summary>
   <form method="post" action="/ui/plans/{{$p.ID}}/prices" class="form">
     <input type="hidden" name="_csrf" value="{{$csrf}}">
     <div class="row">
-      <label>Amount <input name="amount" required inputmode="decimal"></label>
+      <label>Price <input name="amount" required inputmode="decimal"></label>
       <label>Currency <select name="currency">{{range currencies}}<option {{if eq . $.D.Currency}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-      <label>Every <input name="interval_count" type="number" min="1" value="1"></label>
-      <label>Interval <select name="interval"><option>month</option><option>year</option><option>week</option><option>day</option><option value="one_time">one time</option></select></label>
-      <label>Trial days <input name="trial_days" type="number" min="0" value="0"></label>
-      <label>Nickname <input name="nickname" placeholder="2026 pricing"></label>
+      <label>Charged every <input name="interval_count" type="number" min="1" value="1" class="narrow"></label>
+      <label>Period <select name="interval"><option value="month">month(s)</option><option value="year">year(s)</option><option value="week">week(s)</option><option value="day">day(s)</option><option value="one_time">only once</option></select></label>
+      <label>Free trial days <input name="trial_days" type="number" min="0" value="0" class="narrow"></label>
+      <label>Label <span class="muted">(optional)</span> <input name="nickname" placeholder="2026 pricing"></label>
     </div>
-    <p class="muted">Existing subscribers keep their current price. Move them from the subscription page.</p>
+    <p class="hint">People already signed up keep their current price. To move someone, open their subscription and use “Switch plan”.</p>
     <div><button class="primary">Add price</button></div>
   </form>
 </details>
@@ -39,16 +38,25 @@
   <form method="post" action="/ui/plans/{{$p.ID}}" class="form">
     <input type="hidden" name="_csrf" value="{{$csrf}}">
     <div class="row"><label>Name <input name="name" value="{{$p.Name}}" required></label><label>Description <input name="description" value="{{$p.Description}}"></label></div>
-    <label class="check"><input type="checkbox" name="active" {{if $p.Active}}checked{{end}}> Active (archived plans cannot take new subscribers)</label>
+    <label class="check"><input type="checkbox" name="active" {{if $p.Active}}checked{{end}}> On sale (untick to stop new sign-ups; current subscribers are not affected)</label>
     <div><button>Save</button></div>
   </form>
 </details>
 {{end}}
 
 {{if .D.Subs}}
-<div class="card flush"><h2>Subscribers</h2><div class="tablewrap"><table>
-  <thead><tr><th>Subscription</th><th>Status</th><th>Period end</th></tr></thead><tbody>
-  {{range .D.Subs}}<tr><td><a href="/ui/subscriptions/{{.ID}}" class="mono">{{short .ID}}</a></td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td>{{dt .CurrentPeriodEnd}}</td></tr>{{end}}
+<div class="card flush"><h2>Who is signed up</h2><div class="tablewrap"><table>
+  <thead><tr><th>Customer</th><th>Status</th><th>Paid through</th></tr></thead><tbody>
+  {{range .D.Subs}}<tr><td><a href="/ui/subscriptions/{{.ID}}">{{with index $.D.Names (printf "%v" .CustomerID)}}{{.}}{{else}}Open{{end}}</a></td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td>{{date .CurrentPeriodEnd}}</td></tr>{{end}}
   </tbody></table></div></div>
 {{end}}
+
+<details class="panel">
+  <summary>Technical details</summary>
+  <div><dl class="kv">
+    <dt>Plan code</dt><dd class="mono">{{$p.Code}}</dd>
+    <dt>Plan ID</dt><dd class="mono">{{$p.ID}}</dd>
+    {{range $p.Prices}}<dt>Price ID{{if .Nickname}} ({{.Nickname}}){{end}}</dt><dd class="mono">{{.ID}}</dd>{{end}}
+  </dl></div>
+</details>
 {{end}}

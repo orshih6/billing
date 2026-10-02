@@ -1,6 +1,6 @@
 {{define "content"}}
 {{$csrf := .CSRF}}{{$me := .P.KeyID}}
-<div class="pagehead"><div><h1>API keys</h1><div class="sub">Keys for {{.Tenant.Name}}. Integrations send one as the <code>X-API-Key</code> header. Only a hash is stored.</div></div></div>
+<div class="pagehead"><div><h1>API keys</h1><div class="sub">Keys let your software, or a colleague, sign in to {{.Tenant.Name}}. Each key can do only what you tick. It works like a password: share it carefully.</div></div></div>
 {{if .P.Has "keys:write"}}
 <details class="panel">
   <summary>New key</summary>
@@ -8,23 +8,23 @@
     <input type="hidden" name="_csrf" value="{{$csrf}}">
     <div class="row">
       <label>Name <input name="name" required placeholder="checkout-service"></label>
-      <label>Expires in <select name="expires_in"><option value="never">never</option><option value="720h">30 days</option><option value="2160h">90 days</option><option value="8760h">1 year</option></select></label>
+      <label>Expires in <select name="expires_in"><option value="never">Never</option><option value="720h">30 days</option><option value="2160h">90 days</option><option value="8760h">1 year</option></select></label>
     </div>
     <div class="scopes">
       {{range .D.Scopes}}{{if $.P.Has .}}
       <label class="check"><input type="checkbox" name="scopes" value="{{.}}"><span><code>{{.}}</code><span class="desc">{{index $.D.Describe .}}</span></span></label>
       {{end}}{{end}}
     </div>
-    <p class="muted">You can only grant scopes your own key holds.</p>
+    <p class="hint">You can only give permissions your own key has. Developers send the key as the <code>X-API-Key</code> header.</p>
     <div><button class="primary">Create key</button></div>
   </form>
 </details>
 {{end}}
 <div class="card flush"><div class="tablewrap"><table>
-  <thead><tr><th>Name</th><th>Key</th><th>Scopes</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th>Key</th><th>Can</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead>
   <tbody>
   {{range .D.List}}
-  <tr><td>{{.Name}}{{if eq .ID $me}} <span class="badge">this session</span>{{end}}</td><td class="mono nowrap">{{keyDisplay .Prefix .LastFour}}</td>
+  <tr><td>{{.Name}}{{if eq .ID $me}} <span class="badge">you</span>{{end}}</td><td class="mono nowrap">{{keyDisplay .Prefix .LastFour}}</td>
     <td class="mono">{{scopeList .Scopes}}</td><td class="nowrap">{{dt .LastUsedAt}}</td><td class="nowrap">{{date .ExpiresAt}}</td>
     <td>{{if .RevokedAt}}<span class="badge b-revoked">revoked</span>{{else if .Expired}}<span class="badge b-expired">expired</span>{{else}}<span class="badge b-active">active</span>{{end}}</td>
     <td>{{if not .RevokedAt}}{{if ne .ID $me}}{{if $.P.Has "keys:write"}}<form method="post" action="/ui/keys/{{.ID}}/revoke" class="inline" data-confirm="Revoke {{.Name}}? Anything using it stops working immediately."><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small danger">Revoke</button></form>{{end}}{{end}}{{end}}</td></tr>

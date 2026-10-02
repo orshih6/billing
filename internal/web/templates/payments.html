@@ -1,18 +1,18 @@
 {{define "content"}}
-<div class="pagehead"><div><h1>Payments</h1><div class="sub">Every attempt to pay an invoice, through any provider.</div></div></div>
+<div class="pagehead"><div><h1>Payments</h1><div class="sub">Money coming in. Each row is one try to pay an invoice; open it to see the invoice.</div></div></div>
 <div class="filters">
   <a href="/ui/payments" class="{{if not .D.Status}}on{{end}}">All</a>
   {{range .D.Statuses}}<a href="?status={{.}}" class="{{if eq . $.D.Status}}on{{end}}">{{statusLabel .}}</a>{{end}}
 </div>
 <div class="card flush"><div class="tablewrap"><table>
-  <thead><tr><th>Started</th><th>Customer</th><th>Provider</th><th>Status</th><th class="num">Amount</th><th>Settled</th></tr></thead>
+  <thead><tr><th>Started</th><th>Customer</th><th>Method</th><th>Status</th><th class="num">Amount</th><th>Paid on</th></tr></thead>
   <tbody>
   {{range .D.List.Data}}
   <tr><td class="nowrap"><a href="/ui/invoices/{{.InvoiceID}}">{{dt .CreatedAt}}</a></td>
     <td><a href="/ui/customers/{{.CustomerID}}">{{index $.D.Names (printf "%v" .CustomerID)}}</a></td>
-    <td>{{.Provider}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td>
+    <td>{{providerLabel .Provider}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td>
     <td class="num">{{money .Amount .Currency}}</td><td class="nowrap">{{dt .SettledAt}}</td></tr>
-  {{else}}<tr><td colspan="6" class="empty">No payments.</td></tr>{{end}}
+  {{else}}<tr><td colspan="6" class="empty">{{if .D.Status}}No payments with this status.{{else}}No payments yet.{{end}}</td></tr>{{end}}
   </tbody></table></div>
   {{if .D.Next}}<div class="pager"><a class="btn" href="?status={{.D.Status}}&after={{.D.Next}}">Older →</a></div>{{end}}
 </div>

@@ -1,25 +1,25 @@
 {{define "content"}}
-<div class="pagehead"><div><h1>Tenants</h1><div class="sub">Each tenant is one system that bills its own customers here. Data never crosses tenants.</div></div></div>
+<div class="pagehead"><div><h1>Businesses</h1><div class="sub">Each business bills its own customers here and never sees another's data.</div></div></div>
 <details class="panel" {{if not .Tenants}}open{{end}}>
-  <summary>New tenant</summary>
+  <summary>New business</summary>
   <form method="post" action="/ui/tenants" class="form">
     <input type="hidden" name="_csrf" value="{{.CSRF}}">
     <div class="row">
-      <label>Slug <input name="slug" required pattern="[a-z0-9][a-z0-9-]{1,62}" placeholder="acme"></label>
       <label>Name <input name="name" required placeholder="Acme Cloud"></label>
+      <label>Short name <span class="muted">(lowercase, no spaces)</span> <input name="slug" required pattern="[a-z0-9][a-z0-9-]{1,62}" placeholder="acme"></label>
       <label>Default currency <select name="currency">{{range .D.Currencies}}<option {{if eq . "MNT"}}selected{{end}}>{{.}}</option>{{end}}</select></label>
     </div>
-    <label class="check"><input type="checkbox" name="admin_key" checked> Create an admin API key for it</label>
-    <div><button class="primary">Create tenant</button></div>
+    <label class="check"><input type="checkbox" name="admin_key" checked> Create an admin key so someone can log in to it</label>
+    <div><button class="primary">Create business</button></div>
   </form>
 </details>
 <div class="card flush"><div class="tablewrap"><table>
-  <thead><tr><th>Name</th><th>Slug</th><th>Currency</th><th>Status</th><th>Id</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th>Short name</th><th>Currency</th><th>Status</th><th>Id</th><th></th></tr></thead>
   <tbody>
   {{$csrf := .CSRF}}
   {{range .Tenants}}
   <tr><td>{{.Name}}</td><td class="mono">{{.Slug}}</td><td>{{.DefaultCurrency}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="mono faint">{{.ID}}</td>
     <td><form method="post" action="/ui/tenant" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="tenant_id" value="{{.ID}}"><button class="small">Open</button></form></td></tr>
-  {{else}}<tr><td colspan="6" class="empty">No tenants yet.</td></tr>{{end}}
+  {{else}}<tr><td colspan="6" class="empty">No businesses yet.</td></tr>{{end}}
   </tbody></table></div></div>
 {{end}}

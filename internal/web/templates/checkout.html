@@ -1,12 +1,12 @@
 {{define "content"}}
-<div class="testbanner">Test checkout — the mock provider. No money moves.</div>
+<div class="testbanner">This is a test checkout. No real money moves.</div>
 <p class="muted">{{.D.T.Name}} · Invoice {{str .D.Inv.Number}}</p>
 <div class="checkout-amount">{{money .D.Pay.Amount .D.Pay.Currency}}</div>
 <p>Status: <span class="badge b-{{.D.Pay.Status}}" title="{{.D.Pay.Status}}">{{statusLabel .D.Pay.Status}}</span></p>
 {{if eq (printf "%v" .D.Pay.Status) "pending"}}
 <form method="post" class="actions mt">
   <button class="primary" name="outcome" value="succeed">Pay {{money .D.Pay.Amount .D.Pay.Currency}}</button>
-  <button name="outcome" value="fail" class="danger">Decline</button>
+  <button name="outcome" value="fail" class="danger">Simulate a failed payment</button>
 </form>
 {{else if .D.Pay.ReturnURL}}
 <p class="mt"><a class="btn" href="{{.D.Pay.ReturnURL}}">Return to the merchant</a></p>

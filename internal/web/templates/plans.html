@@ -1,5 +1,5 @@
 {{define "content"}}
-<div class="pagehead"><div><h1>Plans &amp; add-ons</h1><div class="sub">A plan is what a customer subscribes to. An add-on is an extra they can put on top, like more storage.</div></div></div>
+<div class="pagehead"><div><h1>Plans &amp; add-ons</h1><div class="sub">What you sell. A plan is what a customer signs up to; an add-on is an optional extra on top, like more storage.</div></div></div>
 {{if .P.Has "plans:write"}}
 <details class="panel" {{if not .D.List.Data}}open{{end}}>
   <summary>New plan</summary>
@@ -7,31 +7,34 @@
     <input type="hidden" name="_csrf" value="{{.CSRF}}">
     <div class="row">
       <label>Name <input name="name" required placeholder="Pro"></label>
-      <label>Code <span class="muted">(your app uses this)</span> <input name="code" required pattern="[a-z0-9][a-z0-9_.\-]{0,63}" placeholder="pro"></label>
       <label>This is <select name="kind"><option value="base">a plan</option><option value="addon">an add-on</option></select></label>
-      <label>Description <input name="description"></label>
+      <label>Description <span class="muted">(optional)</span> <input name="description"></label>
     </div>
     <h3>Price</h3>
     <div class="row">
-      <label>Amount <input name="amount" inputmode="decimal" placeholder="29000"></label>
+      <label>Price <input name="amount" inputmode="decimal" placeholder="29000"></label>
       <label>Currency <select name="currency">{{range currencies}}<option {{if eq . $.D.Currency}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-      <label>Every <input name="interval_count" type="number" min="1" value="1"></label>
-      <label>Interval <select name="interval"><option>month</option><option>year</option><option>week</option><option>day</option><option value="one_time">one time</option></select></label>
+      <label>Charged every <input name="interval_count" type="number" min="1" value="1" class="narrow"></label>
+      <label>Period <select name="interval"><option value="month">month(s)</option><option value="year">year(s)</option><option value="week">week(s)</option><option value="day">day(s)</option><option value="one_time">only once</option></select></label>
       <label>Free trial days <input name="trial_days" type="number" min="0" value="0" class="narrow"></label>
     </div>
-    <p class="hint">Prices can't be edited later, only replaced, so existing subscribers keep the price they signed up at.</p>
-    <div><button class="primary">Create</button></div>
+    <details class="inner"><summary>For developers: plan code</summary>
+      <label>Code <input name="code" pattern="[a-z0-9][a-z0-9_.\-]{0,63}" placeholder="made from the name, e.g. pro"></label>
+      <p class="hint">The short name your own software uses to check what a customer has. Leave blank and we make one from the name.</p>
+    </details>
+    <p class="hint">A price can't be edited once created, only replaced, so people who already signed up keep the price they agreed to.</p>
+    <div><button class="primary">Create plan</button></div>
   </form>
 </details>
 {{end}}
 <div class="card flush"><div class="tablewrap"><table>
-  <thead><tr><th>Name</th><th>Type</th><th>Code</th><th>Price</th><th>Status</th></tr></thead>
+  <thead><tr><th>Name</th><th>Type</th><th>Price</th><th>Status</th></tr></thead>
   <tbody>
   {{range .D.List.Data}}
-  <tr><td><a href="/ui/plans/{{.ID}}">{{.Name}}</a></td><td>{{if eq .Kind "addon"}}Add-on{{else}}Plan{{end}}</td><td class="mono">{{.Code}}</td>
+  <tr><td><a href="/ui/plans/{{.ID}}">{{.Name}}</a></td><td>{{if eq .Kind "addon"}}Add-on{{else}}Plan{{end}}</td>
     <td>{{range .Prices}}{{if .Active}}<div class="nowrap">{{money .Amount .Currency}} / {{if gt .IntervalCount 1}}{{.IntervalCount}} {{end}}{{.Interval}}</div>{{end}}{{end}}</td>
-    <td>{{if .Active}}<span class="badge b-active">active</span>{{else}}<span class="badge">archived</span>{{end}}</td></tr>
-  {{else}}<tr><td colspan="5" class="empty">Nothing to sell yet. Create your first plan above.</td></tr>{{end}}
+    <td>{{if .Active}}<span class="badge b-active">on sale</span>{{else}}<span class="badge">not for sale</span>{{end}}</td></tr>
+  {{else}}<tr><td colspan="4" class="empty">Nothing to sell yet. Create your first plan above.</td></tr>{{end}}
   </tbody></table></div>
   {{if .D.Next}}<div class="pager"><a class="btn" href="?after={{.D.Next}}">Older →</a></div>{{end}}
 </div>

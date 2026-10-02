@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="pagehead">
-  <div><h1>Customers</h1><div class="sub">People and organisations this tenant bills. <code>external_id</code> is your system's own user id.</div></div>
-  <form method="get" class="row"><label>Search <input name="q" value="{{.D.Q}}" placeholder="name, email or external id"></label><button>Search</button></form>
+  <div><h1>Customers</h1><div class="sub">The people and businesses you bill. Open one to sign them up to a plan or send them a bill.</div></div>
+  <form method="get" class="row"><label>Search <input name="q" value="{{.D.Q}}" placeholder="Name or email"></label><button>Search</button></form>
 </div>
 {{if .P.Has "customers:write"}}
 <details class="panel" {{if not .D.List.Data}}{{if not .D.Q}}open{{end}}{{end}}>
@@ -12,18 +12,21 @@
       <label>Name <input name="name" required></label>
       <label>Email <input name="email" type="email"></label>
       <label>Phone <input name="phone"></label>
-      <label>External id <input name="external_id" placeholder="user-123"></label>
     </div>
+    <details class="inner"><summary>Linking to your app (optional)</summary>
+      <label>Your app's user ID <input name="external_id" placeholder="user-123"></label>
+      <p class="hint">Only needed if your own software also talks to billing. Leave it blank otherwise.</p>
+    </details>
     <div><button class="primary">Create customer</button></div>
   </form>
 </details>
 {{end}}
 <div class="card flush"><div class="tablewrap"><table>
-  <thead><tr><th>Name</th><th>Email</th><th>External id</th><th>Created</th></tr></thead>
+  <thead><tr><th>Name</th><th>Email</th><th>App user ID</th><th>Created</th></tr></thead>
   <tbody>
   {{range .D.List.Data}}
   <tr><td><a href="/ui/customers/{{.ID}}">{{.Name}}</a></td><td>{{.Email}}</td><td class="mono">{{str .ExternalID}}</td><td class="nowrap">{{date .CreatedAt}}</td></tr>
-  {{else}}<tr><td colspan="4" class="empty">{{if .D.Q}}No customers match “{{.D.Q}}”.{{else}}No customers yet. Add one above, or let your app create them through the API.{{end}}</td></tr>{{end}}
+  {{else}}<tr><td colspan="4" class="empty">{{if .D.Q}}No customers match “{{.D.Q}}”.{{else}}No customers yet. Add your first one above.{{end}}</td></tr>{{end}}
   </tbody></table></div>
   {{if .D.Next}}<div class="pager"><a class="btn" href="?q={{.D.Q}}&after={{.D.Next}}">Older →</a></div>{{end}}
 </div>

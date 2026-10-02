@@ -1,13 +1,13 @@
 {{define "content"}}
 <div class="pagehead">
-  <div><h1>Events</h1><div class="sub">Everything that happened, in the order it committed. Webhook endpoints receive these.</div></div>
-  <form method="get" class="row"><label>Type <select name="type" data-autosubmit><option value="">all</option>{{range .D.Types}}<option {{if eq . $.D.Type}}selected{{end}}>{{.}}</option>{{end}}</select></label></form>
+  <div><h1>Events</h1><div class="sub">A record of everything that happened, newest first. Mostly useful to developers: these are also what webhooks send.</div></div>
+  <form method="get" class="row"><label>Type <select name="type" data-autosubmit><option value="">Everything</option>{{range .D.Types}}<option {{if eq . $.D.Type}}selected{{end}}>{{.}}</option>{{end}}</select></label></form>
 </div>
 {{range .D.List.Data}}
 <details class="panel">
   <summary><code>{{.Type}}</code> <span class="muted">· {{dt .CreatedAt}}</span></summary>
   <div><pre class="json">{{json .Data}}</pre></div>
 </details>
-{{else}}<div class="card empty">No events yet.</div>{{end}}
+{{else}}<div class="card empty">Nothing has happened yet.</div>{{end}}
 {{if .D.Next}}<div class="pager"><a class="btn" href="?type={{.D.Type}}&after={{.D.Next}}">Older →</a></div>{{end}}
 {{end}}

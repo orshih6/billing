@@ -126,6 +126,15 @@ func (u *UI) parseTemplates() error {
 			return out
 		},
 		"statusLabel": statusLabel,
+		"providerLabel": func(v any) string {
+			switch fmt.Sprint(v) {
+			case "mock":
+				return "Test payment"
+			case "manual":
+				return "Bank transfer / cash"
+			}
+			return fmt.Sprint(v)
+		},
 		"kindLabel": func(v any) string {
 			switch fmt.Sprint(v) {
 			case "subscription_create":

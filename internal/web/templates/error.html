@@ -1,4 +1,4 @@
 {{define "content"}}
 <div class="pagehead"><div><h1>{{if eq (printf "%v" .D.Status) "404"}}Not found{{else if eq (printf "%v" .D.Status) "403"}}Not allowed{{else}}Error{{end}}</h1></div></div>
-<div class="card"><p>{{.D.Message}}</p><p><a href="/ui/">Back to the dashboard</a></p></div>
+<div class="card"><p>{{.D.Message}}</p><p><a href="/ui/">Back to Home</a></p></div>
 {{end}}

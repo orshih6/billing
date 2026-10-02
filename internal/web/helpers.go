@@ -192,3 +192,29 @@ func (u *UI) setupSteps(r *http.Request, tenantID uuid.UUID) []setupStep {
 			Link: "/ui/invoices?status=open", Action: "Open unpaid invoices", Done: count(&models.Payment{}, "status = ?", domain.PaymentSucceeded)},
 	}
 }
+
+// planCodeFrom derives a plan code from its name ("Pro Monthly" → "pro-monthly")
+// so people who never touch the API need not invent one. Names with no ASCII
+// letters or digits (e.g. Cyrillic) get a short random code instead.
+func planCodeFrom(name string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			dash = false
+		case b.Len() > 0 && !dash:
+			b.WriteByte('-')
+			dash = true
+		}
+	}
+	code := strings.TrimSuffix(b.String(), "-")
+	if len(code) > 48 {
+		code = strings.TrimSuffix(code[:48], "-")
+	}
+	if code == "" {
+		code = "plan-" + uuid.NewString()[:8]
+	}
+	return code
+}

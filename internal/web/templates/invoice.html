@@ -2,12 +2,12 @@
 {{$i := .D.I}}{{$csrf := .CSRF}}{{$st := printf "%v" $i.Status}}
 <div class="pagehead">
   <div><h1>{{.Title}} <span class="badge b-{{$i.Status}}" title="{{$i.Status}}">{{statusLabel $i.Status}}</span></h1>
-    <div class="sub">{{with .D.Customer}}<a href="/ui/customers/{{.ID}}">{{.Name}}</a> · {{end}}{{kindLabel $i.Kind}}{{if $i.SubscriptionID}} · <a href="/ui/subscriptions/{{$i.SubscriptionID}}">subscription</a>{{end}} · <span class="mono faint">{{$i.ID}}</span></div></div>
+    <div class="sub">{{with .D.Customer}}<a href="/ui/customers/{{.ID}}">{{.Name}}</a> · {{end}}{{kindLabel $i.Kind}}{{if $i.SubscriptionID}} · <a href="/ui/subscriptions/{{$i.SubscriptionID}}">view subscription</a>{{end}}</div></div>
   {{if .P.Has "invoices:write"}}
   <div class="actions">
-    {{if eq $st "draft"}}<form method="post" action="/ui/invoices/{{$i.ID}}/finalize" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="primary">Finalize</button></form>{{end}}
-    {{if or (eq $st "draft") (eq $st "open")}}<form method="post" action="/ui/invoices/{{$i.ID}}/void" class="inline" data-confirm="Void this invoice? Anything already paid on it becomes customer credit."><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="danger">Void</button></form>{{end}}
-    {{if eq $st "open"}}<form method="post" action="/ui/invoices/{{$i.ID}}/uncollectible" class="inline" data-confirm="Write off what is still owed as bad debt?"><input type="hidden" name="_csrf" value="{{$csrf}}"><button>Mark uncollectible</button></form>{{end}}
+    {{if eq $st "draft"}}<form method="post" action="/ui/invoices/{{$i.ID}}/finalize" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="primary" title="Locks the invoice, gives it a number and makes it payable.">Ready to send</button></form>{{end}}
+    {{if or (eq $st "draft") (eq $st "open")}}<form method="post" action="/ui/invoices/{{$i.ID}}/void" class="inline" data-confirm="Cancel this invoice? The customer no longer owes it. Anything already paid on it becomes credit they can spend."><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="danger">Cancel invoice</button></form>{{end}}
+    {{if eq $st "open"}}<form method="post" action="/ui/invoices/{{$i.ID}}/uncollectible" class="inline" data-confirm="Write this off? Use this when you have given up on being paid. It is recorded as a loss."><input type="hidden" name="_csrf" value="{{$csrf}}"><button title="Give up on being paid and record it as a loss.">Write off</button></form>{{end}}
   </div>
   {{end}}
 </div>
@@ -21,41 +21,42 @@
       {{if $i.TaxTotal}}<dt>{{$i.TaxName}} {{percent $i.TaxRateBps}}{{if $i.TaxInclusive}} <span class="muted">(included)</span>{{end}}</dt><dd class="num">{{if not $i.TaxInclusive}}+ {{end}}{{money $i.TaxTotal $i.Currency}}</dd>{{end}}
       <dt class="strong">Total</dt><dd class="num strong">{{money $i.Total $i.Currency}}</dd>
       {{if $i.AmountPaid}}<dt>Paid</dt><dd class="num">− {{money $i.AmountPaid $i.Currency}}</dd>{{end}}
-      {{if $i.CreditApplied}}<dt>Paid from credit</dt><dd class="num">− {{money $i.CreditApplied $i.Currency}}</dd>{{end}}
+      {{if $i.CreditApplied}}<dt>Paid from their credit</dt><dd class="num">− {{money $i.CreditApplied $i.Currency}}</dd>{{end}}
       <dt class="strong">Left to pay</dt><dd class="num strong">{{money $i.AmountDue $i.Currency}}</dd>
     </dl>
   </div>
   <div class="card">
     <h2>Details</h2>
     <dl class="kv">
-      {{if $i.Reference}}<dt>Payment reference</dt><dd><code>{{str $i.Reference}}</code></dd>{{end}}
-      {{if $i.PeriodStart}}<dt>Period</dt><dd>{{dt $i.PeriodStart}} → {{dt $i.PeriodEnd}}</dd>{{end}}
+      {{if $i.Reference}}<dt>Payment reference</dt><dd><code>{{str $i.Reference}}</code> <span class="hint">Ask the customer to put this in their transfer.</span></dd>{{end}}
+      {{if $i.PeriodStart}}<dt>Covers</dt><dd>{{dt $i.PeriodStart}} → {{dt $i.PeriodEnd}}</dd>{{end}}
       <dt>Due</dt><dd>{{dt $i.DueAt}}</dd>
-      {{if $i.FinalizedAt}}<dt>Finalized</dt><dd>{{dt $i.FinalizedAt}}</dd>{{end}}
+      {{if $i.FinalizedAt}}<dt>Sent</dt><dd>{{dt $i.FinalizedAt}}</dd>{{end}}
       {{if $i.PaidAt}}<dt>Paid</dt><dd>{{dt $i.PaidAt}}</dd>{{end}}
-      {{if $i.VoidedAt}}<dt>Voided</dt><dd>{{dt $i.VoidedAt}}</dd>{{end}}
-      {{if $i.Memo}}<dt>Memo</dt><dd>{{$i.Memo}}</dd>{{end}}
+      {{if $i.VoidedAt}}<dt>Canceled</dt><dd>{{dt $i.VoidedAt}}</dd>{{end}}
+      {{if $i.Memo}}<dt>Note</dt><dd>{{$i.Memo}}</dd>{{end}}
     </dl>
   </div>
 </div>
 
-<div class="card flush"><h2>Lines</h2><div class="tablewrap"><table>
-  <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th></tr></thead><tbody>
+<div class="card flush"><h2>Items</h2><div class="tablewrap"><table>
+  <thead><tr><th>What for</th><th class="num">Qty</th><th class="num">Price each</th><th class="num">Amount</th></tr></thead><tbody>
   {{range $i.Lines}}<tr><td>{{.Description}}</td><td class="num">{{.Quantity}}</td><td class="num">{{money .UnitAmount $i.Currency}}</td><td class="num">{{money .Amount $i.Currency}}</td></tr>
-  {{else}}<tr><td colspan="4" class="empty">No lines yet.</td></tr>{{end}}
+  {{else}}<tr><td colspan="4" class="empty">No items yet. Add one below.</td></tr>{{end}}
   </tbody></table></div></div>
 
 {{if eq $st "draft"}}{{if .P.Has "invoices:write"}}
 <details class="panel" open>
-  <summary>Add a line</summary>
+  <summary>Add an item</summary>
   <form method="post" action="/ui/invoices/{{$i.ID}}/lines" class="form">
     <input type="hidden" name="_csrf" value="{{$csrf}}">
     <div class="row">
-      <label>Description <input name="description" required></label>
-      <label>Unit amount ({{$i.Currency}}) <input name="amount" required inputmode="decimal"></label>
+      <label>What for <input name="description" required></label>
+      <label>Price each ({{$i.Currency}}) <input name="amount" required inputmode="decimal"></label>
       <label>Quantity <input name="quantity" type="number" min="1" value="1"></label>
     </div>
-    <div><button>Add line</button></div>
+    <div><button>Add item</button></div>
+    <p class="hint">When the invoice is complete, press “Ready to send” at the top.</p>
   </form>
 </details>
 {{end}}{{end}}
@@ -64,26 +65,26 @@
 <div class="grid g2">
   {{if .P.Has "payments:write"}}
   <div class="card">
-    <h2>Collect payment</h2>
-    <p class="muted">Starts a payment for the {{money $i.AmountDue $i.Currency}} due. Mock gives a test checkout link; manual gives transfer instructions to confirm later.</p>
+    <h2>Ask for payment</h2>
+    <p class="muted">Creates a payment of {{money $i.AmountDue $i.Currency}} you can send the customer: a checkout link, or bank transfer instructions.</p>
     <form method="post" action="/ui/invoices/{{$i.ID}}/pay" class="row">
       <input type="hidden" name="_csrf" value="{{$csrf}}">
-      <label>Provider <select name="provider">{{range .D.Providers}}<option>{{.}}</option>{{end}}</select></label>
-      <button class="primary">Start payment</button>
+      <label>How they pay <select name="provider">{{range .D.Providers}}<option value="{{.}}">{{providerLabel .}}</option>{{end}}</select></label>
+      <button class="primary">Create payment</button>
     </form>
   </div>
   {{end}}
   {{if .P.Has "payments:manual"}}
   <div class="card">
-    <h2>Record money received</h2>
+    <h2>Already got the money?</h2>
     <form method="post" action="/ui/invoices/{{$i.ID}}/manual" class="form">
       <input type="hidden" name="_csrf" value="{{$csrf}}">
       <div class="row">
         <label>Amount ({{$i.Currency}}) <input name="amount" required inputmode="decimal" value="{{amountInput $i.AmountDue $i.Currency}}"></label>
-        <label>Bank / receipt reference <input name="reference" placeholder="statement id"></label>
+        <label>Bank or receipt reference <span class="muted">(optional)</span> <input name="reference" placeholder="From your bank statement"></label>
       </div>
-      <label>Note <input name="note"></label>
-      <p class="muted">Less than due leaves the invoice open; more becomes customer credit. A reference can only be recorded once.</p>
+      <label>Note <span class="muted">(optional)</span> <input name="note"></label>
+      <p class="hint">Paid less? The rest stays owed. Paid more? The extra becomes credit for next time. Each reference can be used once, so the same transfer is never counted twice.</p>
       <div><button class="primary">Record payment</button></div>
     </form>
   </div>
@@ -93,43 +94,49 @@
 
 {{if .D.Payments}}
 <div class="card flush"><h2>Payments</h2><div class="tablewrap"><table>
-  <thead><tr><th>Started</th><th>Provider</th><th>Status</th><th class="num">Amount</th><th>Details</th><th></th></tr></thead><tbody>
+  <thead><tr><th>Started</th><th>Method</th><th>Status</th><th class="num">Amount</th><th>Details</th><th></th></tr></thead><tbody>
   {{range .D.Payments}}{{$ps := printf "%v" .Status}}
-  <tr><td class="nowrap">{{dt .CreatedAt}}</td><td>{{.Provider}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="num">{{money .Amount .Currency}}</td>
-    <td>{{if .PayURL}}{{if eq $ps "pending"}}<a href="{{.PayURL}}" target="_blank" rel="noopener">checkout link</a>{{end}}{{end}}
+  <tr><td class="nowrap">{{dt .CreatedAt}}</td><td>{{providerLabel .Provider}}</td><td><span class="badge b-{{.Status}}" title="{{.Status}}">{{statusLabel .Status}}</span></td><td class="num">{{money .Amount .Currency}}</td>
+    <td>{{if .PayURL}}{{if eq $ps "pending"}}<a href="{{.PayURL}}" target="_blank" rel="noopener">Open checkout link</a>{{end}}{{end}}
         {{if .Instructions}}{{if eq $ps "pending"}}<div class="muted">{{.Instructions}}</div>{{end}}{{end}}
         {{if .Note}}<div class="muted">{{.Note}}</div>{{end}}{{if .FailureReason}}<div class="muted">{{.FailureReason}}</div>{{end}}
         {{if .CancelReason}}<div class="muted">Canceled: {{.CancelReason}}</div>{{end}}
-        {{if .ProviderCancel}}<div class="muted">At {{.Provider}}: <span class="badge b-{{if eq .ProviderCancel "done"}}ok{{else if eq .ProviderCancel "failed"}}bad{{else}}pending{{end}}">{{if eq .ProviderCancel "done"}}intent closed{{else if eq .ProviderCancel "pending"}}closing…{{else if eq .ProviderCancel "already_paid"}}was already paid{{else}}cancel failed{{end}}</span>{{if .ProviderCancelError}} {{.ProviderCancelError}}{{end}}</div>{{end}}</td>
+        {{if .ProviderCancel}}<div class="muted">At {{providerLabel .Provider}}: <span class="badge b-{{if eq .ProviderCancel "done"}}ok{{else if eq .ProviderCancel "failed"}}bad{{else}}pending{{end}}">{{if eq .ProviderCancel "done"}}intent closed{{else if eq .ProviderCancel "pending"}}closing…{{else if eq .ProviderCancel "already_paid"}}was already paid{{else}}cancel failed{{end}}</span>{{if .ProviderCancelError}} {{.ProviderCancelError}}{{end}}</div>{{end}}</td>
     <td><div class="actions">
       {{if eq $ps "pending"}}
         {{if eq .Provider "mock"}}{{if $.P.Has "payments:write"}}
-          <form method="post" action="/ui/payments/{{.ID}}/mock/succeed" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small primary">Succeed</button></form>
-          <form method="post" action="/ui/payments/{{.ID}}/mock/fail" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small">Fail</button></form>
+          <form method="post" action="/ui/payments/{{.ID}}/mock/succeed" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small primary" title="Test only: pretend the customer paid.">Test: paid</button></form>
+          <form method="post" action="/ui/payments/{{.ID}}/mock/fail" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small" title="Test only: pretend the payment failed.">Test: failed</button></form>
         {{end}}{{end}}
         {{if eq .Provider "manual"}}{{if $.P.Has "payments:manual"}}
-          <form method="post" action="/ui/payments/{{.ID}}/confirm" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small primary">Confirm received</button></form>
+          <form method="post" action="/ui/payments/{{.ID}}/confirm" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small primary">Money arrived</button></form>
         {{end}}{{end}}
-        {{if $.P.Has "payments:write"}}<form method="post" action="/ui/payments/{{.ID}}/cancel" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small">Cancel</button></form>{{end}}
+        {{if $.P.Has "payments:write"}}<form method="post" action="/ui/payments/{{.ID}}/cancel" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small">Cancel payment</button></form>{{end}}
       {{end}}
       {{if eq .ProviderCancel "failed"}}{{if $.P.Has "payments:write"}}
         <form method="post" action="/ui/payments/{{.ID}}/retry-provider-cancel" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small">Retry cancel</button></form>
       {{end}}{{end}}
       {{if eq $ps "succeeded"}}{{if $.P.Has "payments:write"}}
-        <form method="post" action="/ui/payments/{{.ID}}/refund" class="inline" data-confirm="Refund this payment in full? The invoice stays paid."><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small danger">Refund</button></form>
+        <form method="post" action="/ui/payments/{{.ID}}/refund" class="inline" data-confirm="Refund this payment in full? The money goes back to the customer. The invoice still counts as paid."><input type="hidden" name="_csrf" value="{{$csrf}}"><button class="small danger">Refund</button></form>
       {{end}}{{end}}
     </div></td></tr>
   {{end}}
   </tbody></table></div></div>
 {{end}}
 
-{{if .D.Postings}}
-<div class="card flush"><h2>Ledger postings</h2><div class="tablewrap"><table>
+<details class="panel">
+  <summary>Technical details</summary>
+  <div>
+    <dl class="kv"><dt>Invoice ID</dt><dd class="mono">{{$i.ID}}</dd><dt>Status code</dt><dd class="mono">{{$i.Status}}</dd></dl>
+    {{if .D.Postings}}
+<h3>Accounting entries</h3><div class="tablewrap"><table>
   <thead><tr><th>When</th><th>Kind</th><th>Account</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead><tbody>
   {{range .D.Postings}}{{$t := .}}{{range .Entries}}
   <tr><td class="nowrap faint">{{dt $t.EffectiveAt}}</td><td class="muted">{{$t.Kind}}</td><td>{{index $.D.AccountNames (printf "%v" .AccountID)}}</td>
     <td class="num">{{if .Debit}}{{money .Debit $t.Currency}}{{end}}</td><td class="num">{{if .Credit}}{{money .Credit $t.Currency}}{{end}}</td></tr>
   {{end}}{{end}}
-  </tbody></table></div></div>
+  </tbody></table></div>
 {{end}}
+  </div>
+</details>
 {{end}}

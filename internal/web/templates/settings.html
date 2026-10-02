@@ -1,6 +1,6 @@
 {{define "content"}}
 {{$s := .D.S}}{{$admin := .P.Has "admin"}}
-<div class="pagehead"><div><h1>Settings</h1><div class="sub">How {{.Tenant.Name}} bills. Changes apply to invoices created from now on.{{if not $admin}} Read-only: changing settings needs the admin scope.{{end}}</div></div></div>
+<div class="pagehead"><div><h1>Settings</h1><div class="sub">How {{.Tenant.Name}} bills. Changes apply to invoices created from now on.{{if not $admin}} You can view these but not change them; ask whoever gave you access for an admin key.{{end}}</div></div></div>
 <form method="post" action="/ui/settings" class="form">
   <input type="hidden" name="_csrf" value="{{.CSRF}}">
   <fieldset class="card form" {{if not $admin}}disabled{{end}}>
@@ -8,19 +8,20 @@
     <div class="row">
       <label>Name <input name="name" value="{{.Tenant.Name}}" required></label>
       <label>Default currency <select name="default_currency">{{range currencies}}<option {{if eq . $.Tenant.DefaultCurrency}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-      <label>Invoice prefix <input name="invoice_prefix" value="{{$s.InvoicePrefix}}" maxlength="12"></label>
+      <label>Invoice number starts with <input name="invoice_prefix" value="{{$s.InvoicePrefix}}" maxlength="12" placeholder="INV"></label>
     </div>
-    <h2>Timing</h2>
+    <h2>Deadlines</h2>
+    <p class="hint">The defaults suit most businesses. Change them only if you need to.</p>
     <div class="row">
-      <label>Invoice due (days) <input name="invoice_due_days" type="number" min="0" value="{{$s.InvoiceDueDays}}"></label>
-      <label>Raise renewals (days before) <input name="renewal_lead_days" type="number" min="1" value="{{$s.RenewalLeadDays}}"></label>
-      <label>Grace after unpaid renewal (days) <input name="grace_days" type="number" min="0" value="{{$s.Grace}}"></label>
+      <label>Days to pay an invoice <input name="invoice_due_days" type="number" min="0" value="{{$s.InvoiceDueDays}}"></label>
+      <label>Send renewal invoices, days early <input name="renewal_lead_days" type="number" min="1" value="{{$s.RenewalLeadDays}}"></label>
+      <label>Grace days after a missed renewal <span class="muted">(they keep access)</span> <input name="grace_days" type="number" min="0" value="{{$s.Grace}}"></label>
     </div>
     <div class="row">
-      <label>New subscription must be paid within (hours) <input name="incomplete_expiry_hours" type="number" min="1" value="{{$s.IncompleteExpiryHours}}"></label>
-      <label>Pending payment expires after (hours) <input name="payment_expiry_hours" type="number" min="1" value="{{$s.PaymentExpiryHours}}"></label>
-      <label>When a subscription lapses, its unpaid invoice is
-        <select name="lapse_action"><option value="void" {{if eq $s.LapseAction "void"}}selected{{end}}>voided</option><option value="uncollectible" {{if eq $s.LapseAction "uncollectible"}}selected{{end}}>written off (uncollectible)</option></select></label>
+      <label>Hours to pay for a new sign-up <span class="muted">(then it is dropped)</span> <input name="incomplete_expiry_hours" type="number" min="1" value="{{$s.IncompleteExpiryHours}}"></label>
+      <label>Hours a payment link stays valid <input name="payment_expiry_hours" type="number" min="1" value="{{$s.PaymentExpiryHours}}"></label>
+      <label>When a subscription ends unpaid, its invoice is
+        <select name="lapse_action"><option value="void" {{if eq $s.LapseAction "void"}}selected{{end}}>canceled (they no longer owe it)</option><option value="uncollectible" {{if eq $s.LapseAction "uncollectible"}}selected{{end}}>written off (recorded as a loss)</option></select></label>
     </div>
     <h2>Tax</h2>
     {{$tax := .D.S.Tax}}
@@ -34,24 +35,24 @@
           <option value="inclusive" {{if $tax}}{{if $tax.Inclusive}}selected{{end}}{{end}}>already include tax</option>
         </select></label>
     </div>
-    <p class="hint">Tax is worked out on the amount after discounts. Individual customers can be exempt or have their own rate; edit them on their page.</p>
+    <p class="hint">Tax is worked out after discounts. A customer can be tax-free or have their own rate: open them and use “Edit details”.</p>
     <h2>Payments</h2>
-    <label>Manual payment instructions <textarea name="manual_instructions">{{$s.ManualInstructions}}</textarea></label>
-    <p class="muted"><code>{reference}</code>, <code>{amount}</code> and <code>{invoice}</code> are filled in per invoice.</p>
-    <label class="check"><input type="checkbox" name="mock_enabled" {{if $s.MockEnabled}}checked{{end}}> Allow test payments (the mock provider) in production</label>
+    <label>Bank transfer instructions shown to customers <textarea name="manual_instructions">{{$s.ManualInstructions}}</textarea></label>
+    <p class="hint">Write <code>{amount}</code>, <code>{invoice}</code> or <code>{reference}</code> and each invoice fills in its own value. Example: “Pay {amount} to account 1234, with {reference} as the description.”</p>
+    <label class="check"><input type="checkbox" name="mock_enabled" {{if $s.MockEnabled}}checked{{end}}> Allow test payments on the live system <span class="muted">(normally off; test payments move no real money)</span></label>
     {{if $admin}}<div><button class="primary">Save settings</button></div>{{end}}
   </fieldset>
 </form>
 
 <section class="card" aria-labelledby="pm-h">
   <h2 id="pm-h">Payment methods</h2>
-  <p class="muted">How customers can pay. Payment gateways need your merchant details; they are stored encrypted and secrets are never shown again.</p>
+  <p class="muted">How customers can pay you. Card or bank gateways need your merchant details; secrets are stored encrypted and never shown again.</p>
   {{range .D.Providers}}{{$p := .}}
   <div class="provider">
     <div class="provider-head">
-      <strong>{{.Name}}</strong>
+      <strong>{{providerLabel .Name}}</strong>
       {{if .Ready}}<span class="badge b-ok">ready</span>{{else if .Account}}<span class="badge">turned off</span>{{else}}<span class="badge b-pending">not connected</span>{{end}}
-      <span class="muted">{{if eq .Name "mock"}}Test checkout, no real money{{else if eq .Name "manual"}}Bank transfer or cash, confirmed by you{{else if .Automatic}}Confirms payments automatically{{end}}</span>
+      <span class="muted">{{if eq .Name "mock"}}For trying things out. No real money moves.{{else if eq .Name "manual"}}The customer pays you directly; you confirm when the money arrives.{{else if .Automatic}}Confirms payments automatically.{{end}}</span>
     </div>
     {{if .NeedsAccount}}{{if $admin}}
     <form method="post" action="/ui/providers/{{.Name}}" class="form">
@@ -63,12 +64,12 @@
           {{else}}<input name="cfg_{{.Key}}" value="{{if $p.Account}}{{with index $p.Account.Hints .Key}}{{.}}{{end}}{{end}}">{{end}}
           {{with .Help}}<span class="hint">{{.}}</span>{{end}}</label>
         {{end}}
-        <label>Mode <select name="mode"><option value="test" {{if $p.Account}}{{if eq $p.Account.Mode "test"}}selected{{end}}{{end}}>Test (sandbox)</option><option value="live" {{if $p.Account}}{{if eq $p.Account.Mode "live"}}selected{{end}}{{end}}>Live</option></select></label>
+        <label>Mode <select name="mode"><option value="test" {{if $p.Account}}{{if eq $p.Account.Mode "test"}}selected{{end}}{{end}}>Test (no real money)</option><option value="live" {{if $p.Account}}{{if eq $p.Account.Mode "live"}}selected{{end}}{{end}}>Live (real payments)</option></select></label>
       </div>
-      <label class="check"><input type="checkbox" name="enabled" {{if $p.Account}}{{if $p.Account.Enabled}}checked{{end}}{{else}}checked{{end}}> Customers can pay with {{.Name}}</label>
-      {{with .Account}}<p class="hint">Give {{$p.Name}} this callback URL: <code>{{$.D.PublicURL}}{{.WebhookPath}}</code></p>{{end}}
+      <label class="check"><input type="checkbox" name="enabled" {{if $p.Account}}{{if $p.Account.Enabled}}checked{{end}}{{else}}checked{{end}}> Customers can pay with {{providerLabel .Name}}</label>
+      {{with .Account}}<p class="hint">In your {{$p.Name}} account, set this as the notification (webhook) URL: <code>{{$.D.PublicURL}}{{.WebhookPath}}</code></p>{{end}}
       <div class="actions"><button class="primary">{{if .Account}}Save{{else}}Connect{{end}}</button>
-        {{if .Account}}<button name="disconnect" value="yes" class="danger" data-confirm="Disconnect {{.Name}}? Customers can no longer pay with it.">Disconnect</button>{{end}}</div>
+        {{if .Account}}<button name="disconnect" value="yes" class="danger" data-confirm="Disconnect {{providerLabel .Name}}? Customers can no longer pay with it.">Disconnect</button>{{end}}</div>
     </form>
     {{end}}{{end}}
   </div>

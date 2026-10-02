@@ -1,11 +1,11 @@
 {{define "content"}}
 <div class="pagehead">
-  <div><h1>Ledger</h1><div class="sub">Double-entry and append-only. Every balance below is recomputed from its entries in the reconciliation check.</div></div>
+  <div><h1>Ledger</h1><div class="sub">The accounting record behind every amount, for your accountant. Entries are never edited or deleted, so the books can always be checked.</div></div>
   <div class="actions">{{if .D.All}}<a class="btn" href="/ui/ledger">System accounts only</a>{{else}}<a class="btn" href="/ui/ledger?all=1">Include customer accounts</a>{{end}}</div>
 </div>
 <div class="card">
-  {{if .D.Rec.OK}}<span class="badge b-ok">Books reconcile</span> <span class="muted">Every transaction balances and every stored balance matches its entries.</span>
-  {{else}}<span class="badge b-bad">Mismatch</span>
+  {{if .D.Rec.OK}}<span class="badge b-ok">Books add up</span> <span class="muted">Every amount matches its records. Nothing to do.</span>
+  {{else}}<span class="badge b-bad">Books don't add up</span> <span class="muted">Something is wrong. Send the details below to whoever runs this system.</span>
     <pre class="json">{{json .D.Rec}}</pre>{{end}}
 </div>
 <div class="card flush"><h2>Accounts</h2><div class="tablewrap"><table>

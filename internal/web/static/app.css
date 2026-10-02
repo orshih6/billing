@@ -276,3 +276,32 @@ dl.totals dt.strong, dl.totals dd.strong { padding-top: 6px; border-top: 1px sol
 .grid { margin-bottom: 16px; }
 .grid > details.panel, .grid > .card { margin-bottom: 0; }
 .grid > details.panel { align-self: start; }
+
+/* ---- advanced nav group ---- */
+.navmore { margin-top: 12px; }
+.navmore > summary {
+  cursor: pointer; list-style: none; font-size: 12px; color: var(--muted);
+  padding: 6px 8px; border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center;
+}
+.navmore > summary::-webkit-details-marker { display: none; }
+.navmore > summary::after { content: ""; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform 0.15s ease-out; }
+.navmore[open] > summary::after { transform: rotate(45deg); }
+.navmore > summary:hover { background: var(--neutral-soft); color: var(--ink); }
+.navnote { font-size: 12px; color: var(--muted); padding: 0 8px 6px; margin: 0; }
+@media (max-width: 860px) {
+  .nav { flex-wrap: wrap; overflow-x: visible; }
+  .navmore { margin-top: 0; flex-basis: 100%; }
+  .navmore > summary { display: inline-flex; gap: 8px; }
+  .navmore > a { display: inline-block; }
+  .navnote { display: none; }
+}
+
+/* ---- how it fits together (dashboard) ---- */
+.flow { list-style: none; margin: 0; padding: 0; counter-reset: flow; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.flow li { counter-increment: flow; display: grid; gap: 4px; align-content: start; padding-top: 10px; border-top: 2px solid var(--line); }
+.flow li:first-child { border-top-color: var(--accent); }
+.flow strong::before { content: counter(flow) ". "; color: var(--muted); font-weight: 500; }
+.flow span { color: var(--muted); font-size: 13px; }
+details.howto > div { display: grid; gap: 4px; }
+@media (max-width: 860px) { .flow { grid-template-columns: 1fr; gap: 10px; } }
+.form h2 + .hint { margin-top: -8px; }

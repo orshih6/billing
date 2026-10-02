@@ -1,6 +1,6 @@
 {{define "content"}}
 {{$csrf := .CSRF}}{{$canWrite := .P.Has "coupons:write"}}
-<div class="pagehead"><div><h1>Coupons</h1><div class="sub">Discounts customers get by entering a promo code at checkout, or that you apply to a subscription.</div></div></div>
+<div class="pagehead"><div><h1>Coupons</h1><div class="sub">Discount codes. Give a customer the code, or apply it yourself when you sign them up.</div></div></div>
 
 {{if $canWrite}}
 <details class="panel" {{if not .D.List}}open{{end}}>
@@ -14,13 +14,13 @@
     <fieldset class="row plainset">
       <legend>Discount</legend>
       <label>Type <select name="kind"><option value="percent">Percent off</option><option value="amount">Fixed amount off</option></select></label>
-      <label>Value <input name="value" required inputmode="decimal" placeholder="20 (percent) or 5000 (amount)"></label>
+      <label>How much <input name="value" required inputmode="decimal" placeholder="20 for 20%, or an amount"></label>
       <label>Currency <span class="muted">(fixed amount only)</span> <select name="currency">{{range currencies}}<option {{if eq . $.D.Currency}}selected{{end}}>{{.}}</option>{{end}}</select></label>
     </fieldset>
     <fieldset class="row plainset">
-      <legend>On subscriptions, it lasts</legend>
-      <label>For <select name="duration"><option value="once">The first period only</option><option value="repeating">Several periods</option><option value="forever">As long as they subscribe</option></select></label>
-      <label>How many periods <span class="muted">(if several)</span> <input name="periods" type="number" min="1" placeholder="3" class="narrow"></label>
+      <legend>How long the discount lasts</legend>
+      <label>For <select name="duration"><option value="once">First payment only</option><option value="repeating">Several payments</option><option value="forever">Every payment, for good</option></select></label>
+      <label>How many payments <span class="muted">(if several)</span> <input name="periods" type="number" min="1" placeholder="3" class="narrow"></label>
     </fieldset>
     <details class="inner">
       <summary>Limits (optional)</summary>
@@ -39,14 +39,14 @@
 {{end}}
 
 <div class="card flush"><div class="tablewrap"><table>
-  <thead><tr><th>Code</th><th>Discount</th><th>Lasts</th><th class="num">Used</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>Code</th><th>Discount</th><th>For</th><th class="num">Used</th><th>Status</th><th></th></tr></thead>
   <tbody>
   {{range .D.List}}
   <tr><td><strong class="mono">{{.Code}}</strong>{{if ne .Name .Code}}<div class="muted">{{.Name}}</div>{{end}}</td>
     <td>{{if .PercentOff}}{{deref .PercentOff}}% off{{else}}{{money (derefAmount .AmountOff) .Currency}} off{{end}}{{if .PlanIDs}} <span class="muted">· some plans</span>{{end}}</td>
-    <td>{{if eq .Duration "forever"}}Every period{{else if eq .Duration "once"}}First period{{else}}{{deref .DurationPeriods}} periods{{end}}</td>
+    <td>{{if eq .Duration "forever"}}Every payment{{else if eq .Duration "once"}}First payment{{else}}{{deref .DurationPeriods}} payments{{end}}</td>
     <td class="num">{{.TimesRedeemed}}{{with .MaxRedemptions}} / {{.}}{{end}}</td>
-    <td>{{if not .Active}}<span class="badge">off</span>{{else if .RedeemBy}}<span class="badge b-active">until {{date .RedeemBy}}</span>{{else}}<span class="badge b-active">active</span>{{end}}</td>
+    <td>{{if not .Active}}<span class="badge">turned off</span>{{else if .RedeemBy}}<span class="badge b-active">until {{date .RedeemBy}}</span>{{else}}<span class="badge b-active">active</span>{{end}}</td>
     <td>{{if $canWrite}}<form method="post" action="/ui/coupons/{{.ID}}/toggle" class="inline"><input type="hidden" name="_csrf" value="{{$csrf}}"><input type="hidden" name="active" value="{{if .Active}}false{{else}}true{{end}}"><button class="small">{{if .Active}}Turn off{{else}}Turn on{{end}}</button></form>{{end}}</td></tr>
   {{else}}<tr><td colspan="6" class="empty">No coupons yet. Create one above, then share its code or apply it to a subscription.</td></tr>{{end}}
   </tbody></table></div></div>

@@ -201,7 +201,7 @@ func (u *UI) tenants(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, r, http.StatusForbidden, "Tenants are managed with a platform key.")
 		return
 	}
-	u.render(w, r, "tenants", "Tenants", "tenants", map[string]any{"Currencies": currencyCodes()})
+	u.render(w, r, "tenants", "Businesses", "tenants", map[string]any{"Currencies": currencyCodes()})
 }
 
 func (u *UI) createTenant(w http.ResponseWriter, r *http.Request) {
@@ -219,12 +219,12 @@ func (u *UI) createTenant(w http.ResponseWriter, r *http.Request) {
 	}
 	u.setCookie(w, tenantCookie, out.Tenant.ID.String(), int(sessionTTL.Seconds()))
 	if out.APIKey != nil {
-		u.render(w, r, "key_created", "Tenant created", "tenants", map[string]any{
+		u.render(w, r, "key_created", "Business created", "tenants", map[string]any{
 			"Token": out.APIKey.Token, "Key": out.APIKey.Key, "Context": "Admin key for tenant " + out.Tenant.Name,
 		})
 		return
 	}
-	u.done(w, r, "/ui/", nil, "Tenant "+out.Tenant.Name+" created.")
+	u.done(w, r, "/ui/", nil, "Business "+out.Tenant.Name+" created.")
 }
 
 func (u *UI) runEngine(w http.ResponseWriter, r *http.Request) {
@@ -233,7 +233,7 @@ func (u *UI) runEngine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rep, err := u.svc.RunEngine(r.Context())
-	u.done(w, r, "/ui/", err, "Engine ran: "+strings.Trim(strings.ReplaceAll(jsonCompact(rep), `"`, ""), "{}"))
+	u.done(w, r, "/ui/", err, "Renewals processed: "+strings.Trim(strings.ReplaceAll(jsonCompact(rep), `"`, ""), "{}"))
 }
 
 // ---- customers ------------------------------------------------------------------------
@@ -342,7 +342,7 @@ func (u *UI) grantCredit(w http.ResponseWriter, r *http.Request) {
 	} else {
 		err = &billing.Error{Status: 422, Code: "invalid_amount", Message: err.Error()}
 	}
-	u.done(w, r, "/ui/customers/"+id.String(), err, "Credit granted.")
+	u.done(w, r, "/ui/customers/"+id.String(), err, "Credit given.")
 }
 
 func (u *UI) subscribe(w http.ResponseWriter, r *http.Request) {
@@ -417,7 +417,10 @@ func (u *UI) createPlan(w http.ResponseWriter, r *http.Request) {
 	if !ok || !u.can(w, r, auth.ScopePlansWrite) {
 		return
 	}
-	in := billing.PlanInput{Code: r.FormValue("code"), Name: r.FormValue("name"), Description: r.FormValue("description"), Kind: r.FormValue("kind")}
+	in := billing.PlanInput{Code: strings.TrimSpace(r.FormValue("code")), Name: r.FormValue("name"), Description: r.FormValue("description"), Kind: r.FormValue("kind")}
+	if in.Code == "" {
+		in.Code = planCodeFrom(in.Name)
+	}
 	if pi, err := priceFromForm(r); err != nil {
 		u.done(w, r, "/ui/plans", err, "")
 		return
@@ -469,6 +472,7 @@ func (u *UI) plan(w http.ResponseWriter, r *http.Request) {
 	if rcFrom(r).P.Has(auth.ScopeSubscriptionsRead) {
 		subs, _ := u.svc.ListSubscriptions(r.Context(), tid, billing.SubscriptionFilter{PlanID: &id}, billing.Page{Limit: 50})
 		d["Subs"] = subs.Data
+		d["Names"] = u.customerNames(r, tid, subCustomerIDs(subs.Data))
 	}
 	u.render(w, r, "plan", p.Name, "plans", d)
 }
@@ -729,7 +733,7 @@ func (u *UI) resumeSubscription(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := idParam(r, "id")
 	_, err := u.svc.ResumeSubscription(r.Context(), tid, id)
-	u.done(w, r, "/ui/subscriptions/"+id.String(), err, "Subscription resumed.")
+	u.done(w, r, "/ui/subscriptions/"+id.String(), err, "It will keep renewing.")
 }
 
 func (u *UI) changePrice(w http.ResponseWriter, r *http.Request) {
@@ -744,7 +748,7 @@ func (u *UI) changePrice(w http.ResponseWriter, r *http.Request) {
 	} else {
 		err = &billing.Error{Status: 422, Code: "price_required", Message: "choose a price"}
 	}
-	u.done(w, r, "/ui/subscriptions/"+id.String(), err, "Price change applied.")
+	u.done(w, r, "/ui/subscriptions/"+id.String(), err, "Plan switched.")
 }
 
 // ---- invoices ---------------------------------------------------------------------------
@@ -825,7 +829,7 @@ func (u *UI) addLine(w http.ResponseWriter, r *http.Request) {
 	}
 	qty, _ := strconv.ParseInt(r.FormValue("quantity"), 10, 64)
 	_, err = u.svc.AddInvoiceLine(r.Context(), tid, id, billing.LineInput{Description: r.FormValue("description"), Quantity: qty, UnitAmount: amt})
-	u.done(w, r, "/ui/invoices/"+id.String(), err, "Line added.")
+	u.done(w, r, "/ui/invoices/"+id.String(), err, "Item added.")
 }
 
 func (u *UI) finalize(w http.ResponseWriter, r *http.Request) {
@@ -835,7 +839,7 @@ func (u *UI) finalize(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := idParam(r, "id")
 	_, err := u.svc.FinalizeInvoice(r.Context(), tid, id)
-	u.done(w, r, "/ui/invoices/"+id.String(), err, "Invoice finalized.")
+	u.done(w, r, "/ui/invoices/"+id.String(), err, "Invoice is ready. The customer can pay it now.")
 }
 
 func (u *UI) void(w http.ResponseWriter, r *http.Request) {
@@ -845,7 +849,7 @@ func (u *UI) void(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := idParam(r, "id")
 	_, err := u.svc.VoidInvoice(r.Context(), tid, id, r.FormValue("reason"))
-	u.done(w, r, "/ui/invoices/"+id.String(), err, "Invoice voided.")
+	u.done(w, r, "/ui/invoices/"+id.String(), err, "Invoice canceled.")
 }
 
 func (u *UI) uncollectible(w http.ResponseWriter, r *http.Request) {
@@ -865,7 +869,7 @@ func (u *UI) startPayment(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := idParam(r, "id")
 	_, err := u.svc.StartPayment(r.Context(), tid, id, billing.StartPaymentInput{Provider: r.FormValue("provider")}, keyIDOf(rcFrom(r).P))
-	u.done(w, r, "/ui/invoices/"+id.String(), err, "Payment started.")
+	u.done(w, r, "/ui/invoices/"+id.String(), err, "Payment created. Send the customer the link or instructions below.")
 }
 
 func (u *UI) recordManual(w http.ResponseWriter, r *http.Request) {
@@ -1182,7 +1186,7 @@ func (u *UI) events(w http.ResponseWriter, r *http.Request) {
 		u.getErr(w, r, err)
 		return
 	}
-	u.render(w, r, "events", "Events", "events", map[string]any{"List": list, "Type": t, "Types": events.Types(), "Next": nextCursor(list)})
+	u.render(w, r, "events", "Activity log", "events", map[string]any{"List": list, "Type": t, "Types": events.Types(), "Next": nextCursor(list)})
 }
 
 // ---- settings ------------------------------------------------------------------------------

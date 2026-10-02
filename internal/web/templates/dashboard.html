@@ -1,15 +1,15 @@
 {{define "content"}}
 <div class="pagehead">
-  <div><h1>{{.Tenant.Name}}</h1><div class="sub">Prices in {{.Tenant.DefaultCurrency}} unless a plan says otherwise.</div></div>
+  <div><h1>{{.Tenant.Name}}</h1><div class="sub">Your billing at a glance. Amounts are in {{.Tenant.DefaultCurrency}} unless a plan says otherwise.</div></div>
   {{if .P.IsPlatform}}
-  <form method="post" action="/ui/engine/run" class="inline"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button title="Renewals, overdue checks and expiries run automatically every few seconds. This runs them right now.">Run billing now</button></form>
+  <form method="post" action="/ui/engine/run" class="inline"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button title="Renewals, overdue checks and expiries already run automatically every few seconds. This runs them right now.">Process renewals now</button></form>
   {{end}}
 </div>
 
 {{if not (setupDone .D.Setup)}}
 <section class="card setup" aria-labelledby="setup-h">
   <h2 id="setup-h">Get set up</h2>
-  <p class="muted">Four steps to your first paid subscription. Test payments move no real money.</p>
+  <p class="muted">Four steps to your first paid subscription. You can practise safely: test payments move no real money.</p>
   <ol class="steps">
     {{range .D.Setup}}
     <li class="{{if .Done}}done{{end}}">
@@ -22,16 +22,30 @@
 </section>
 {{end}}
 
+<details class="panel howto" {{if not (setupDone .D.Setup)}}open{{end}}>
+  <summary>New to billing? How it fits together</summary>
+  <div>
+    <ol class="flow">
+      <li><strong>Plan</strong><span>What you sell and its price, e.g. “Pro, 29,000 a month”.</span></li>
+      <li><strong>Customer</strong><span>A person or business who pays you.</span></li>
+      <li><strong>Subscription</strong><span>A customer signed up to a plan. It renews by itself each period.</span></li>
+      <li><strong>Invoice</strong><span>The bill. One is created when they subscribe and before every renewal.</span></li>
+      <li><strong>Payment</strong><span>Money received for an invoice. Once paid, the customer has access until the next renewal.</span></li>
+    </ol>
+    <p class="hint">If a renewal isn't paid, the customer keeps access for a few grace days, then the subscription ends. You can change those days in <a href="/ui/settings">Settings</a>.</p>
+  </div>
+</details>
+
 {{with .D.Stats}}
 <dl class="summary">
-  <div><dt>Monthly recurring revenue</dt>
+  <div><dt>Subscription income per month</dt>
     <dd>{{range $c, $v := .MRR}}<span>{{money $v $c}}</span>{{else}}<span class="faint">—</span>{{end}}</dd></div>
   <div><dt>Collected, last 30 days</dt>
     <dd>{{range $c, $v := .Collected}}<span>{{money $v $c}}</span>{{else}}<span class="faint">—</span>{{end}}</dd></div>
   <div><dt>Waiting to be paid</dt>
     <dd>{{range $c, $v := .Outstanding}}<span>{{money $v $c}}</span>{{else}}<span class="faint">—</span>{{end}}</dd></div>
   <div><dt>Customers</dt><dd><span>{{.Customers}}</span></dd></div>
-  <div><dt>Paying subscriptions</dt><dd><span>{{.ActiveSubscriptions}}</span>{{if .Trialing}} <small class="muted">+ {{.Trialing}} on trial</small>{{end}}</dd></div>
+  <div><dt>Active subscriptions</dt><dd><span>{{.ActiveSubscriptions}}</span>{{if .Trialing}} <small class="muted">+ {{.Trialing}} on trial</small>{{end}}</dd></div>
 </dl>
 {{end}}
 
@@ -40,9 +54,9 @@
 <div class="grid g2">
   {{if .D.PastDue}}
   <div class="card flush"><h2>Overdue subscriptions</h2>
-    <p class="muted pad">Still have access during the grace period. They end if not paid.</p>
+    <p class="muted pad">The renewal wasn't paid. They keep access for a few grace days, then the subscription ends.</p>
     <div class="tablewrap"><table><thead><tr><th>Plan</th><th>Payment was due</th></tr></thead><tbody>
-    {{range .D.PastDue}}<tr><td><a href="/ui/subscriptions/{{.ID}}">{{.PlanCode}}</a></td><td>{{date .CurrentPeriodEnd}}</td></tr>{{end}}
+    {{range .D.PastDue}}<tr><td><a href="/ui/subscriptions/{{.ID}}">{{.PlanName}}</a></td><td>{{date .CurrentPeriodEnd}}</td></tr>{{end}}
     </tbody></table></div></div>
   {{end}}
   {{if .D.OpenInvoices}}
@@ -53,6 +67,6 @@
   {{end}}
 </div>
 {{else}}
-<p class="muted">Nothing is unpaid or overdue.</p>
+<p class="muted">All clear. Nothing is unpaid or overdue.</p>
 {{end}}
 {{end}}
